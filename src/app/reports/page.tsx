@@ -17,7 +17,7 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Reports"
-        title="Browser-ready PDF-style reports for coaches and analysts"
+        title="Browser-Ready PDF-Style Reports for Coaches and Analysts"
         description="Generate weekly team reports, opponent scouting reports, player development reports, game recaps, and season analytics summaries with charts, tables, model outputs, and methodology notes."
         badge="Printable"
         icon={FileText}
@@ -52,7 +52,7 @@ export default function ReportsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Season analytics report preview</CardTitle>
+          <CardTitle>Season Analytics Report Preview</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <SimpleDataTable
@@ -67,15 +67,15 @@ export default function ReportsPage() {
           />
           <div className="grid gap-3 text-sm leading-6 text-muted-foreground md:grid-cols-3">
             <div className="rounded-lg border bg-background p-3">
-              <div className="mb-1 text-foreground">Plain-English insight</div>
+              <div className="mb-1 text-foreground">Plain-English Insight</div>
               Drive efficiency and red-zone execution are the strongest current team signals.
             </div>
             <div className="rounded-lg border bg-background p-3">
-              <div className="mb-1 text-foreground">Model output</div>
-              ML reports include train/test split, validation metrics, feature importance, and small-sample warnings.
+              <div className="mb-1 text-foreground">Model Output</div>
+              ML reports include Train/Test split, validation metrics, Feature Importance, and small-sample warnings.
             </div>
             <div className="rounded-lg border bg-background p-3">
-              <div className="mb-1 text-foreground">Credibility note</div>
+              <div className="mb-1 text-foreground">Credibility Note</div>
               Demo data is clearly marked. Real CSV imports should replace the sample before operational decisions.
             </div>
           </div>

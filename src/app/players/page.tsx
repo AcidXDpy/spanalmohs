@@ -6,6 +6,7 @@ import { SimpleDataTable } from "@/components/tables/simple-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAnalyticsDataset } from "@/lib/data/repository";
+import { statusLabel } from "@/lib/format";
 import { getPlayerImpactRows, getPlayerTrend } from "@/lib/stats/football";
 
 export default function PlayersPage() {
@@ -17,17 +18,17 @@ export default function PlayersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Player intelligence"
-        title="Profiles, trends, impact, reliability, and coach-facing recommendations"
+        eyebrow="Player Intelligence"
+        title="Profiles, Trends, Impact, Reliability, and Coach-Facing Recommendations"
         description="Player evaluation combines usage, EPA contribution, assignment grade, disruption, availability risk, and week-to-week consistency."
-        badge={`${dataset.players.length} rostered players`}
+        badge={`${dataset.players.length} Rostered Players`}
         icon={Users}
       />
 
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Impact leaderboard</CardTitle>
+            <CardTitle>Impact Leaderboard</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -47,14 +48,14 @@ export default function PlayersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{topPlayer.player.name} trend</CardTitle>
+            <CardTitle>{topPlayer.player.name} Trend</CardTitle>
           </CardHeader>
           <CardContent>
             <AnalyticsLineChart
               data={getPlayerTrend(dataset, topPlayer.player.id)}
               series={[
-                { key: "epa", label: "EPA contribution" },
-                { key: "grade", label: "Assignment grade" },
+                { key: "epa", label: "EPA Contribution" },
+                { key: "grade", label: "Assignment Grade" },
                 { key: "snaps", label: "Snaps" },
               ]}
               height={320}
@@ -74,7 +75,7 @@ export default function PlayersPage() {
                     #{row.player.number} / {row.player.position} / {row.player.classYear}
                   </div>
                 </div>
-                <Badge variant="outline">{row.player.status}</Badge>
+                <Badge variant="outline">{statusLabel(row.player.status)}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -94,7 +95,7 @@ export default function PlayersPage() {
               </div>
               <div className="space-y-2 text-sm leading-6 text-muted-foreground">
                 <p>
-                  <span className="text-foreground">Similar archetype:</span> {row.player.archetype}
+                  <span className="text-foreground">Similar Archetype:</span> {row.player.archetype}
                 </p>
                 <p>
                   <span className="text-foreground">Strength:</span>{" "}
@@ -103,13 +104,13 @@ export default function PlayersPage() {
                     : "Provides context-specific value when usage is controlled."}
                 </p>
                 <p>
-                  <span className="text-foreground">Development focus:</span>{" "}
+                  <span className="text-foreground">Development Focus:</span>{" "}
                   {row.reliability < 75
                     ? "Reduce volatility and protect availability risk."
                     : "Expand role while preserving repeatable efficiency."}
                 </p>
                 <p>
-                  <span className="text-foreground">Coach summary:</span> {row.recommendation}
+                  <span className="text-foreground">Coach Summary:</span> {row.recommendation}
                 </p>
               </div>
             </CardContent>

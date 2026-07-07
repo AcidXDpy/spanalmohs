@@ -18,18 +18,18 @@ export default function StatsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Advanced statistics engine"
-        title="Metric formulas, confidence, comparisons, and football situation splits"
+        eyebrow="Advanced Statistics Engine"
+        title="Metric Formulas, Confidence, Comparisons, and Football Situation Splits"
         description="Every displayed metric is calculated from the local football dataset and paired with reliability context so the output is useful without overstating certainty."
-        badge={`${metrics.length} active metrics`}
+        badge={`${metrics.length} Active Metrics`}
         icon={BarChart3}
       />
 
       <Tabs defaultValue="core">
         <TabsList className="mb-4 flex w-full flex-wrap justify-start">
-          <TabsTrigger value="core">Core metrics</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced modules</TabsTrigger>
-          <TabsTrigger value="situational">Situational efficiency</TabsTrigger>
+          <TabsTrigger value="core">Core Metrics</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced Modules</TabsTrigger>
+          <TabsTrigger value="situational">Situational Efficiency</TabsTrigger>
         </TabsList>
 
         <TabsContent value="core" className="space-y-4">
@@ -52,14 +52,14 @@ export default function StatsPage() {
           <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
             <Card>
               <CardHeader>
-                <CardTitle>Game trend context</CardTitle>
+                <CardTitle>Game Trend Context</CardTitle>
               </CardHeader>
               <CardContent>
                 <AnalyticsLineChart
                   data={trendData}
                   series={[
-                    { key: "successRate", label: "Success rate" },
-                    { key: "explosiveRate", label: "Explosive rate" },
+                    { key: "successRate", label: "Success Rate" },
+                    { key: "explosiveRate", label: "Explosive Rate" },
                     { key: "offensiveEpa", label: "Offensive EPA" },
                   ]}
                   height={320}
@@ -69,7 +69,7 @@ export default function StatsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Down, distance, quarter, and score state</CardTitle>
+                <CardTitle>Down, Distance, Quarter, and Score State</CardTitle>
               </CardHeader>
               <CardContent>
                 <SimpleDataTable

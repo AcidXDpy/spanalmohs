@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { csvImportSchemas, getAnalyticsDataset, getOpponentName } from "@/lib/data/repository";
+import { statusLabel, titleCase } from "@/lib/format";
 import { evaluateDataQuality, rosterStatusSummary } from "@/lib/validation/data-quality";
 
 export default function DataHubPage() {
@@ -18,10 +19,10 @@ export default function DataHubPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Data hub"
-        title="Upload, validate, edit, and inspect the analytics source of truth"
+        eyebrow="Data Hub"
+        title="Upload, Validate, Edit, and Inspect the Analytics Source of Truth"
         description="A central intake layer for players, teams, games, opponents, plays, drives, stats, scouting notes, practices, injuries, and availability records."
-        badge={`${Math.round(quality.overallCompleteness * 100)}% complete`}
+        badge={`${Math.round(quality.overallCompleteness * 100)}% Complete`}
         icon={Database}
       />
 
@@ -30,13 +31,13 @@ export default function DataHubPage() {
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Completeness scores</CardTitle>
+            <CardTitle>Completeness Scores</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {quality.completenessScores.map((score) => (
               <div key={score.entity} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="capitalize">{score.entity}</span>
+                  <span>{titleCase(score.entity)}</span>
                   <span className="font-mono text-muted-foreground">
                     {Math.round(score.score * 100)}%
                   </span>
@@ -49,7 +50,7 @@ export default function DataHubPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Validation flags</CardTitle>
+            <CardTitle>Validation Flags</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -59,9 +60,9 @@ export default function DataHubPage() {
                 {
                   key: "severity",
                   header: "Severity",
-                  cell: (row) => <Badge variant={row.severity === "critical" ? "destructive" : "outline"}>{row.severity}</Badge>,
+                  cell: (row) => <Badge variant={row.severity === "critical" ? "destructive" : "outline"}>{statusLabel(row.severity)}</Badge>,
                 },
-                { key: "entity", header: "Entity", cell: (row) => row.entity },
+                { key: "entity", header: "Entity", cell: (row) => titleCase(row.entity) },
                 { key: "message", header: "Flag", cell: (row) => row.message },
                 { key: "recommendation", header: "Action", cell: (row) => row.recommendation },
               ]}
@@ -74,7 +75,7 @@ export default function DataHubPage() {
         {Object.entries(rosterStatus).map(([status, count]) => (
           <Card key={status} size="sm">
             <CardContent className="pt-1">
-              <div className="text-xs capitalize text-muted-foreground">{status}</div>
+              <div className="text-xs text-muted-foreground">{statusLabel(status)}</div>
               <div className="mt-1 font-mono text-2xl font-semibold">{count}</div>
             </CardContent>
           </Card>
@@ -83,7 +84,7 @@ export default function DataHubPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Raw data inspection</CardTitle>
+          <CardTitle>Raw Data Inspection</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="players">
@@ -103,7 +104,7 @@ export default function DataHubPage() {
                   { key: "name", header: "Name", cell: (row) => row.name },
                   { key: "position", header: "Pos", cell: (row) => row.position },
                   { key: "class", header: "Class", cell: (row) => row.classYear },
-                  { key: "status", header: "Status", cell: (row) => <Badge variant="outline">{row.status}</Badge> },
+                  { key: "status", header: "Status", cell: (row) => <Badge variant="outline">{statusLabel(row.status)}</Badge> },
                   { key: "archetype", header: "Archetype", cell: (row) => row.archetype },
                 ]}
               />
@@ -130,7 +131,7 @@ export default function DataHubPage() {
                   { key: "id", header: "Play", cell: (row) => row.id },
                   { key: "down", header: "Down", cell: (row) => `${row.down}&${row.distance}` },
                   { key: "yard", header: "Yard", cell: (row) => row.yardLine },
-                  { key: "type", header: "Type", cell: (row) => row.playType },
+                  { key: "type", header: "Type", cell: (row) => titleCase(row.playType) },
                   { key: "yards", header: "Yards", cell: (row) => row.yardsGained },
                   { key: "epa", header: "EPA", cell: (row) => <span className="font-mono">{row.epa}</span> },
                 ]}
@@ -154,7 +155,7 @@ export default function DataHubPage() {
                 columns={[
                   { key: "date", header: "Date", cell: (row) => row.date },
                   { key: "player", header: "Player ID", cell: (row) => row.playerId },
-                  { key: "status", header: "Status", cell: (row) => <Badge variant="outline">{row.status}</Badge> },
+                  { key: "status", header: "Status", cell: (row) => <Badge variant="outline">{statusLabel(row.status)}</Badge> },
                   { key: "note", header: "Note", cell: (row) => row.note },
                 ]}
               />

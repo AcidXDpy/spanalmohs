@@ -8,7 +8,7 @@ export function PrintReportButton() {
   return (
     <Button variant="outline" size="sm" onClick={() => window.print()}>
       <Printer className="size-4" />
-      Print / save PDF
+      Print / Save PDF
     </Button>
   );
 }

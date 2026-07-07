@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-w-0 items-center gap-3">
             <Sheet>
               <SheetTrigger asChild>
-                <Button className="lg:hidden" variant="outline" size="icon-sm" aria-label="Open navigation">
+                <Button className="lg:hidden" variant="outline" size="icon-sm" aria-label="Open Navigation">
                   <Menu className="size-4" />
                 </Button>
               </SheetTrigger>
@@ -117,7 +117,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold tracking-normal">Mount Olive SPANAL</div>
               <div className="truncate font-mono text-[11px] text-muted-foreground">
-                Football analytics command center / demo data
+                Football Analytics Command Center / Demo Data
               </div>
             </div>
           </div>

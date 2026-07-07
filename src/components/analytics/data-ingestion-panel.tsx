@@ -40,13 +40,13 @@ export function DataIngestionPanel({ schemas }: { schemas: CsvSchema[] }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Upload className="size-4" />
-          CSV upload and manual entry
+          CSV Upload and Manual Entry
         </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Data type</Label>
+            <Label>Data Type</Label>
             <Select value={schemaEntity} onValueChange={setSchemaEntity}>
               <SelectTrigger>
                 <SelectValue />
@@ -61,7 +61,7 @@ export function DataIngestionPanel({ schemas }: { schemas: CsvSchema[] }) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>CSV file</Label>
+            <Label>CSV File</Label>
             <Input
               type="file"
               accept=".csv,text/csv"
@@ -74,7 +74,7 @@ export function DataIngestionPanel({ schemas }: { schemas: CsvSchema[] }) {
             />
           </div>
           <div className="space-y-2">
-            <Label>Required columns</Label>
+            <Label>Required Columns</Label>
             <div className="flex flex-wrap gap-2">
               {schema.requiredColumns.map((column) => (
                 <Badge key={column} variant="outline" className="font-mono">
@@ -86,7 +86,7 @@ export function DataIngestionPanel({ schemas }: { schemas: CsvSchema[] }) {
         </div>
 
         <div className="space-y-3">
-          <Label>Paste CSV header or rows</Label>
+          <Label>Paste CSV Header or Rows</Label>
           <Textarea
             value={csvText}
             onChange={(event) => setCsvText(event.target.value)}
@@ -95,7 +95,7 @@ export function DataIngestionPanel({ schemas }: { schemas: CsvSchema[] }) {
           />
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={validation.valid ? "outline" : "destructive"}>
-              {validation.valid ? "Schema valid" : "Missing required columns"}
+              {validation.valid ? "Schema Valid" : "Missing Required Columns"}
             </Badge>
             {!validation.valid &&
               validation.missingColumns.map((column) => (
@@ -104,7 +104,7 @@ export function DataIngestionPanel({ schemas }: { schemas: CsvSchema[] }) {
                 </Badge>
               ))}
             <Button size="sm" variant="outline" disabled={!validation.valid}>
-              Stage import
+              Stage Import
             </Button>
           </div>
         </div>

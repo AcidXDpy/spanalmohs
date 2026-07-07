@@ -8,6 +8,7 @@ import { SimpleDataTable } from "@/components/tables/simple-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAnalyticsDataset } from "@/lib/data/repository";
+import { titleCase } from "@/lib/format";
 import {
   calculateTeamMetrics,
   getGameTrendData,
@@ -30,10 +31,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Command center dashboard"
-        title="Team performance and decision-support overview"
+        eyebrow="Command Center Dashboard"
+        title="Team Performance and Decision-Support Overview"
         description="Centralized football analytics for performance tracking, opponent scouting, player evaluation, machine-learning signals, and coach-facing recommendations."
-        badge="Sample/demo data"
+        badge="Sample/Demo Data"
         icon={Gauge}
       />
 
@@ -46,15 +47,15 @@ export default function DashboardPage() {
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Game-by-game performance trend</CardTitle>
+            <CardTitle>Game-by-Game Performance Trend</CardTitle>
           </CardHeader>
           <CardContent>
             <AnalyticsLineChart
               data={trendData}
               series={[
                 { key: "netEfficiency", label: "Net EPA" },
-                { key: "gameControl", label: "Game control" },
-                { key: "winProbability", label: "Win probability" },
+                { key: "gameControl", label: "Game Control" },
+                { key: "winProbability", label: "Win Probability" },
               ]}
               height={310}
             />
@@ -63,7 +64,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Player impact leaders</CardTitle>
+            <CardTitle>Player Impact Leaders</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -81,28 +82,28 @@ export default function DashboardPage() {
       </section>
 
       <InsightPanel
-        title="Analytical signals"
+        title="Analytical Signals"
         insights={[
           {
-            label: "Primary opportunity",
+            label: "Primary Opportunity",
             tone: "opportunity",
             confidence: 0.72,
             body: "Drive efficiency is stronger than raw yardage suggests. Mount Olive is converting possessions into points when first-down success stays above the sample baseline.",
           },
           {
-            label: "Primary risk",
+            label: "Primary Risk",
             tone: "risk",
             confidence: 0.68,
             body: `${topRisk.opponent.name} creates the highest pressure-stress profile. Protection answers and quick-game constraint tags should be prepared before long-yardage downs.`,
           },
           {
-            label: "Performance shift",
+            label: "Performance Shift",
             tone: "signal",
             confidence: 0.61,
             body: "The last three games show higher schedule strength and higher defensive EPA allowed. Opponent adjustment keeps the offense near positive, but volatility has increased.",
           },
           {
-            label: "Data credibility",
+            label: "Data Credibility",
             tone: "note",
             confidence: 0.58,
             body: "The platform is using a realistic demo dataset with fewer than 200 offensive plays. Models are exploratory until real season CSVs expand the sample.",
@@ -113,7 +114,7 @@ export default function DashboardPage() {
       <section className="grid gap-4 xl:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Efficiency snapshot</CardTitle>
+            <CardTitle>Efficiency Snapshot</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {["red-zone-efficiency", "third-down-efficiency", "explosive-rate"].map((key) => {
@@ -134,7 +135,7 @@ export default function DashboardPage() {
 
         <Card className="xl:col-span-2">
           <CardHeader>
-            <CardTitle>Opponent risk queue</CardTitle>
+            <CardTitle>Opponent Risk Queue</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -142,7 +143,7 @@ export default function DashboardPage() {
               rows={opponentRows.slice().sort((a, b) => b.pressureStress - a.pressureStress).slice(0, 4)}
               columns={[
                 { key: "opponent", header: "Opponent", cell: (row) => row.opponent.name },
-                { key: "cluster", header: "Style", cell: (row) => <Badge variant="outline">{row.cluster}</Badge> },
+                { key: "cluster", header: "Style", cell: (row) => <Badge variant="outline">{titleCase(row.cluster)}</Badge> },
                 { key: "pressure", header: "Pressure", cell: (row) => <span className="font-mono">{row.pressureStress}</span> },
                 { key: "recommendation", header: "Recommendation", cell: (row) => row.recommendation },
               ]}

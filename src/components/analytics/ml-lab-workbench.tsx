@@ -19,10 +19,11 @@ import {
   targetOptions,
   type MlModelKind,
 } from "@/lib/ml/algorithms";
+import { titleCase } from "@/lib/format";
 import type { ModelFeatureRow } from "@/types";
 
 function labelize(value: string) {
-  return value.replaceAll("_", " ");
+  return titleCase(value);
 }
 
 export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
@@ -59,7 +60,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
     }));
 
   const exportText = [
-    `Mount Olive SPANAL model report`,
+    `Mount Olive SPANAL Model Report`,
     `Model: ${report.title}`,
     `Target: ${labelize(effectiveTarget)}`,
     `Features: ${features.map(labelize).join(", ")}`,
@@ -75,7 +76,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <FlaskConical className="size-4" />
-              Model controls
+              Model Controls
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -99,7 +100,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Target variable</Label>
+              <Label>Target Variable</Label>
               <Select value={target} onValueChange={setTarget}>
                 <SelectTrigger>
                   <SelectValue />
@@ -114,14 +115,14 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
               </Select>
               {effectiveTarget !== target && (
                 <p className="text-xs leading-5 text-amber-200">
-                  Classification models are using scoring drive because the selected target is continuous.
+                  Classification models are using Scoring Drive because the selected target is continuous.
                 </p>
               )}
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Train/test split</Label>
+                <Label>Train/Test Split</Label>
                 <span className="font-mono text-xs text-muted-foreground">{trainSplit[0]}%</span>
               </div>
               <Slider min={55} max={85} step={1} value={trainSplit} onValueChange={setTrainSplit} />
@@ -178,7 +179,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-sm">Feature importance</CardTitle>
+                <CardTitle className="text-sm">Feature Importance</CardTitle>
                 <Badge variant="outline">{report.title}</Badge>
               </div>
             </CardHeader>
@@ -189,7 +190,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Model explanation</CardTitle>
+              <CardTitle className="text-sm">Model Explanation</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm leading-6 text-muted-foreground">{report.explanation}</p>
@@ -214,7 +215,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
                 }}
               >
                 <Download className="size-4" />
-                Export report
+                Export Report
               </Button>
             </CardContent>
           </Card>
@@ -223,7 +224,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
         {report.clusters.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Cluster descriptions</CardTitle>
+              <CardTitle className="text-sm">Cluster Descriptions</CardTitle>
             </CardHeader>
             <CardContent>
               <SimpleDataTable
@@ -241,7 +242,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Validation predictions</CardTitle>
+            <CardTitle className="text-sm">Validation Predictions</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -251,7 +252,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
                 { key: "label", header: "Row", cell: (row) => row.label },
                 { key: "actual", header: "Actual", cell: (row) => row.actual },
                 { key: "predicted", header: "Predicted", cell: (row) => row.predicted },
-                { key: "split", header: "Split", cell: (row) => <Badge variant="outline">{row.split}</Badge> },
+                { key: "split", header: "Split", cell: (row) => <Badge variant="outline">{titleCase(row.split)}</Badge> },
               ]}
             />
           </CardContent>

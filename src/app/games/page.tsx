@@ -25,8 +25,8 @@ export default function GamesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Game analysis"
-        title="Breakdowns, win probability, drive value, turning points, and postgame reports"
+        eyebrow="Game Analysis"
+        title="Breakdowns, Win Probability, Drive Value, Turning Points, and Postgame Reports"
         description="Each game is decomposed into efficiency, possession quality, explosive plays, mistakes, player impact, and model-generated explanations."
         badge={`${dataset.games.length} games`}
         icon={Trophy}
@@ -35,14 +35,14 @@ export default function GamesPage() {
       <section className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Win probability and control</CardTitle>
+            <CardTitle>Win Probability and Control</CardTitle>
           </CardHeader>
           <CardContent>
             <AnalyticsLineChart
               data={trendData}
               series={[
-                { key: "winProbability", label: "Win probability" },
-                { key: "gameControl", label: "Game control" },
+                { key: "winProbability", label: "Win Probability" },
+                { key: "gameControl", label: "Game Control" },
               ]}
               height={300}
             />
@@ -50,7 +50,7 @@ export default function GamesPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Drive EPA chart</CardTitle>
+            <CardTitle>Drive EPA Chart</CardTitle>
           </CardHeader>
           <CardContent>
             <AnalyticsBarChart data={driveRows} xKey="drive" yKey="epa" height={300} />
@@ -60,7 +60,7 @@ export default function GamesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Game-by-game analytical report</CardTitle>
+          <CardTitle>Game-by-Game Analytical Report</CardTitle>
         </CardHeader>
         <CardContent>
           <SimpleDataTable
@@ -71,9 +71,9 @@ export default function GamesPage() {
               { key: "opponent", header: "Opponent", cell: (row) => row.opponent },
               { key: "result", header: "Result", cell: (row) => <Badge variant="outline">{row.game.result}</Badge> },
               { key: "net", header: "Net EPA", cell: (row) => <span className="font-mono">{row.netEpa}</span> },
-              { key: "drives", header: "Drive eff.", cell: (row) => `${Math.round(row.driveEfficiency * 100)}%` },
-              { key: "turning", header: "Turning point", cell: (row) => row.turningPoint },
-              { key: "explanation", header: "Model explanation", cell: (row) => row.modelExplanation },
+              { key: "drives", header: "Drive Eff.", cell: (row) => `${Math.round(row.driveEfficiency * 100)}%` },
+              { key: "turning", header: "Turning Point", cell: (row) => row.turningPoint },
+              { key: "explanation", header: "Model Explanation", cell: (row) => row.modelExplanation },
             ]}
           />
         </CardContent>
@@ -82,7 +82,7 @@ export default function GamesPage() {
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Player impact by game sample</CardTitle>
+            <CardTitle>Player Impact by Game Sample</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -92,7 +92,7 @@ export default function GamesPage() {
                 { key: "player", header: "Player", cell: (row) => row.player.name },
                 { key: "impact", header: "Impact", cell: (row) => row.impactScore },
                 { key: "epa", header: "EPA", cell: (row) => row.epa },
-                { key: "onoff", header: "On/off", cell: (row) => row.onOffSwing },
+                { key: "onoff", header: "On/Off", cell: (row) => row.onOffSwing },
               ]}
             />
           </CardContent>
@@ -100,7 +100,7 @@ export default function GamesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Mistakes and missed opportunities</CardTitle>
+            <CardTitle>Mistakes and Missed Opportunities</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {gameRows.map((row) => (

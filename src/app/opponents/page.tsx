@@ -7,6 +7,7 @@ import { SimpleDataTable } from "@/components/tables/simple-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAnalyticsDataset } from "@/lib/data/repository";
+import { titleCase } from "@/lib/format";
 import { getOpponentScoutingRows } from "@/lib/stats/football";
 
 export default function OpponentsPage() {
@@ -23,17 +24,17 @@ export default function OpponentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Opponent scouting"
-        title="Tendencies, style clusters, matchup analysis, and scouting reports"
+        eyebrow="Opponent Scouting"
+        title="Tendencies, Style Clusters, Matchup Analysis, and Scouting Reports"
         description="Opponent profiles combine pace, defensive pressure, strength rating, known tendencies, and Mount Olive's game-level performance against similar styles."
-        badge={`${rows.length} opponent profiles`}
+        badge={`${rows.length} Opponent Profiles`}
         icon={Radar}
       />
 
       <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Opponent style map</CardTitle>
+            <CardTitle>Opponent Style Map</CardTitle>
           </CardHeader>
           <CardContent>
             <AnalyticsScatterChart data={scatterRows} xKey="pressure" yKey="pace" zKey="strength" height={320} />
@@ -42,7 +43,7 @@ export default function OpponentsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Scouting matrix</CardTitle>
+            <CardTitle>Scouting Matrix</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -50,7 +51,7 @@ export default function OpponentsPage() {
               rows={rows}
               columns={[
                 { key: "opponent", header: "Opponent", cell: (row) => row.opponent.name },
-                { key: "cluster", header: "Cluster", cell: (row) => <Badge variant="outline">{row.cluster}</Badge> },
+                { key: "cluster", header: "Cluster", cell: (row) => <Badge variant="outline">{titleCase(row.cluster)}</Badge> },
                 { key: "matchup", header: "Matchup", cell: (row) => <span className="font-mono">{row.matchupScore}</span> },
                 { key: "risk", header: "Risk", cell: (row) => row.opponent.riskProfile },
               ]}
@@ -60,22 +61,22 @@ export default function OpponentsPage() {
       </section>
 
       <InsightPanel
-        title="Model-generated scouting report"
+        title="Model-Generated Scouting Report"
         insights={[
           {
-            label: "Highest-risk opponent",
+            label: "Highest-Risk Opponent",
             tone: "risk",
             confidence: 0.69,
             body: `${highestRisk.opponent.name} combines pressure and strength at the top of the sample. The matchup needs quick answers, protection rules, and lower-risk early-down calls.`,
           },
           {
-            label: "Style classification",
+            label: "Style Classification",
             tone: "signal",
             confidence: 0.64,
             body: "The opponent set separates into tempo spread, pressure-control, possession leverage, and balanced baseline profiles. Those clusters should drive weekly scout-card templates.",
           },
           {
-            label: "Recommended strategy",
+            label: "Recommended Strategy",
             tone: "opportunity",
             confidence: 0.62,
             body: highestRisk.recommendation,
@@ -98,7 +99,7 @@ export default function OpponentsPage() {
             <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{row.opponent.record}</Badge>
-                <Badge variant="outline">{row.cluster}</Badge>
+                <Badge variant="outline">{titleCase(row.cluster)}</Badge>
               </div>
               <p>
                 <span className="text-foreground">Tendency:</span> {row.opponent.style}

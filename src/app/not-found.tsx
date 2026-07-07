@@ -10,7 +10,7 @@ export default function NotFound() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <SearchX className="size-4" />
-          Route not found
+          Route Not Found
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -18,7 +18,7 @@ export default function NotFound() {
           This analytics module is not registered in the current Mount Olive SPANAL build.
         </p>
         <Button asChild variant="outline">
-          <Link href="/dashboard">Return to command center</Link>
+          <Link href="/dashboard">Return to Command Center</Link>
         </Button>
       </CardContent>
     </Card>

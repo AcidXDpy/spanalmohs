@@ -17,7 +17,7 @@ export default function ErrorPage({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="size-4 text-amber-200" />
-          Analytics workspace error
+          Analytics Workspace Error
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

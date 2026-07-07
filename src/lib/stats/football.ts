@@ -575,7 +575,7 @@ export function getStrategyRecommendations(dataset: AnalyticsDataset) {
         "Compressed-field efficiency is above baseline but sample size is small.",
     },
     {
-      title: "Opponent weakness finder",
+      title: "Opponent Weakness Finder",
       signal:
         (explosive?.value ?? 0) > 0.085
           ? "Test quarters safeties with vertical switch concepts after run-action."
@@ -585,7 +585,7 @@ export function getStrategyRecommendations(dataset: AnalyticsDataset) {
         "Explosive rate provides the ceiling input for matchup-specific shot calls.",
     },
     {
-      title: "Scenario simulator",
+      title: "Scenario Simulator",
       signal: `${round(baseWinProbability * 100, 1)}% neutral-script baseline; volatility adds +/- ${round(
         (volatility?.value ?? 4) * 2,
         1
@@ -607,14 +607,14 @@ export function getReportCatalog(dataset: AnalyticsDataset) {
       title: "Weekly Team Report",
       scope: "Team performance",
       status: "Ready",
-      included: "Trends, player leaders, availability, risks, methodology notes",
+      included: "Trends, Player Leaders, Availability, Risks, Methodology Notes",
       insight: "Team performance is positive overall, but pressure-heavy opponents are reducing offensive stability.",
     },
     {
       title: "Opponent Scouting Report",
       scope: topOpponent.opponent.name,
       status: "Ready",
-      included: "Tendencies, cluster profile, matchup risks, recommended strategy",
+      included: "Tendencies, Cluster Profile, Matchup Risks, Recommended Strategy",
       insight: `${topOpponent.opponent.name} profiles as ${topOpponent.cluster.toLowerCase()} with ${round(
         topOpponent.pressureStress,
         1
@@ -624,21 +624,21 @@ export function getReportCatalog(dataset: AnalyticsDataset) {
       title: "Player Development Report",
       scope: topPlayer.player.name,
       status: "Ready",
-      included: "Impact, trend, reliability, on/off-field estimate, coach recommendation",
+      included: "Impact, Trend, Reliability, On/Off-Field Estimate, Coach Recommendation",
       insight: `${topPlayer.player.name} is the current top impact profile at ${topPlayer.impactScore}.`,
     },
     {
       title: "Game Recap Report",
       scope: `Week ${latestGame.week} vs ${getOpponentName(latestGame.opponentId, dataset)}`,
       status: "Ready",
-      included: "Win probability, drive chart, key turning points, postgame model explanation",
+      included: "Win Probability, Drive Chart, Key Turning Points, Postgame Model Explanation",
       insight: latestGame.notes,
     },
     {
       title: "Season Analytics Report",
       scope: dataset.team.season,
       status: "Draft",
-      included: "Full statistical inventory, ML validation, schedule adjustment, limitations",
+      included: "Full Statistical Inventory, ML Validation, Schedule Adjustment, Limitations",
       insight: "Season-level conclusions should stay confidence-weighted until more games are imported.",
     },
   ];

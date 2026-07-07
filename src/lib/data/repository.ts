@@ -22,7 +22,7 @@ export const csvImportSchemas = [
     optionalColumns: ["epa", "success", "explosive", "turnover", "playerId", "scoreDiff"],
   },
   {
-    entity: "Player stats",
+    entity: "Player Stats",
     requiredColumns: ["gameId", "playerId", "snaps", "opportunities", "yards", "epaContribution"],
     optionalColumns: ["touchdowns", "tackles", "disruptionPlays", "assignmentGrade"],
   },

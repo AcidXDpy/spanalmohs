@@ -112,11 +112,11 @@ export const modelOptions: Array<{ value: MlModelKind; label: string; descriptio
 ];
 
 export const targetOptions = [
-  { value: "drive_points", label: "Drive points", type: "continuous" },
-  { value: "yards_gained", label: "Drive yards", type: "continuous" },
-  { value: "successful_drive", label: "Scoring drive", type: "binary" },
-  { value: "game_win", label: "Game win", type: "binary" },
-  { value: "final_margin", label: "Final margin", type: "continuous" },
+  { value: "drive_points", label: "Drive Points", type: "continuous" },
+  { value: "yards_gained", label: "Drive Yards", type: "continuous" },
+  { value: "successful_drive", label: "Scoring Drive", type: "binary" },
+  { value: "game_win", label: "Game Win", type: "binary" },
+  { value: "final_margin", label: "Final Margin", type: "continuous" },
 ] as const;
 
 export const defaultFeatureSet = [
@@ -244,10 +244,10 @@ function runLinearRegression(rows: PreparedRow[], config: ModelRunConfig): Model
     modelKind: config.kind,
     warning: sampleWarning(rows, config.features),
     metrics: [
-      { label: "R squared", value: round(rSquared(actual, testPredictions), 3).toString() },
+      { label: "R Squared", value: round(rSquared(actual, testPredictions), 3).toString() },
       { label: "RMSE", value: round(rmse(actual, testPredictions), 2).toString() },
       { label: "MAE", value: round(mae(actual, testPredictions), 2).toString() },
-      { label: "Train/test", value: `${split.train.length}/${split.test.length}` },
+      { label: "Train/Test", value: `${split.train.length}/${split.test.length}` },
     ],
     explanation:
       "Linear regression fits a weighted equation against standardized features. Positive coefficients increase the target after controlling for the other selected inputs.",
@@ -326,8 +326,8 @@ function runLogisticRegression(rows: PreparedRow[], config: ModelRunConfig): Mod
     warning: sampleWarning(rows, config.features),
     metrics: [
       { label: "Accuracy", value: `${round(metrics.accuracy * 100, 1)}%` },
-      { label: "Log loss", value: round(metrics.logLoss, 3).toString() },
-      { label: "Train/test", value: `${split.train.length}/${split.test.length}` },
+      { label: "Log Loss", value: round(metrics.logLoss, 3).toString() },
+      { label: "Train/Test", value: `${split.train.length}/${split.test.length}` },
     ],
     explanation:
       "Logistic regression estimates the probability of a binary target. Coefficients represent directional pressure on log-odds, not guaranteed causation.",
@@ -513,11 +513,11 @@ function runDecisionTree(rows: PreparedRow[], config: ModelRunConfig): ModelRepo
       mode === "classification"
         ? [
             { label: "Accuracy", value: `${round((classMetrics?.accuracy ?? 0) * 100, 1)}%` },
-            { label: "Log loss", value: round(classMetrics?.logLoss ?? 0, 3).toString() },
-            { label: "Train/test", value: `${split.train.length}/${split.test.length}` },
+            { label: "Log Loss", value: round(classMetrics?.logLoss ?? 0, 3).toString() },
+            { label: "Train/Test", value: `${split.train.length}/${split.test.length}` },
           ]
         : [
-            { label: "R squared", value: round(rSquared(actual, predictions), 3).toString() },
+            { label: "R Squared", value: round(rSquared(actual, predictions), 3).toString() },
             { label: "RMSE", value: round(rmse(actual, predictions), 2).toString() },
             { label: "MAE", value: round(mae(actual, predictions), 2).toString() },
           ],
@@ -601,11 +601,11 @@ function runRandomForest(rows: PreparedRow[], config: ModelRunConfig): ModelRepo
       mode === "classification"
         ? [
             { label: "Accuracy", value: `${round((classMetrics?.accuracy ?? 0) * 100, 1)}%` },
-            { label: "Log loss", value: round(classMetrics?.logLoss ?? 0, 3).toString() },
+            { label: "Log Loss", value: round(classMetrics?.logLoss ?? 0, 3).toString() },
             { label: "Trees", value: trees.length.toString() },
           ]
         : [
-            { label: "R squared", value: round(rSquared(actual, predictions), 3).toString() },
+            { label: "R Squared", value: round(rSquared(actual, predictions), 3).toString() },
             { label: "RMSE", value: round(rmse(actual, predictions), 2).toString() },
             { label: "MAE", value: round(mae(actual, predictions), 2).toString() },
           ],
@@ -693,7 +693,7 @@ function runKMeans(rows: PreparedRow[], config: ModelRunConfig): ModelReport {
     metrics: [
       { label: "Clusters", value: k.toString() },
       { label: "Inertia", value: round(inertia, 2).toString() },
-      { label: "Rows clustered", value: rows.length.toString() },
+      { label: "Rows Clustered", value: rows.length.toString() },
     ],
     explanation:
       "K-means standardizes selected features, initializes deterministic centroids, and iteratively assigns rows to the nearest centroid.",
