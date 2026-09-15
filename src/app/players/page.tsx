@@ -1,6 +1,9 @@
 import { Users } from "lucide-react";
 
 import { PageHeader } from "@/components/analytics/page-header";
+import { CinematicAnalysis } from "@/components/analytics/cinematic-analysis";
+import { buildSeasonAnalysisDashboardData } from "@/lib/stats/football-dashboard";
+import { AnalyticsBarChart } from "@/components/charts/analytics-bar-chart";
 import { AnalyticsLineChart } from "@/components/charts/analytics-line-chart";
 import { SimpleDataTable } from "@/components/tables/simple-data-table";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +17,18 @@ export default function PlayersPage() {
   const playerRows = getPlayerImpactRows(dataset);
   const featured = playerRows.slice(0, 4);
   const topPlayer = playerRows[0]!;
+  const impactChartRows = playerRows.slice(0, 16).map((row) => ({
+    player: `#${row.player.number} ${row.position}`,
+    impact: row.impactScore,
+    reliability: row.reliability,
+    usage: row.usage,
+  }));
 
   return (
     <div className="space-y-6">
+      <CinematicAnalysis data={buildSeasonAnalysisDashboardData(dataset)} only="player" />
       <PageHeader
-        eyebrow="Player Intelligence"
+        eyebrow="Player Performance"
         title="Profiles, Trends, Impact, Reliability, and Coach-Facing Recommendations"
         description="Player evaluation combines usage, EPA contribution, assignment grade, disruption, availability risk, and week-to-week consistency."
         badge={`${dataset.players.length} Rostered Players`}
@@ -63,6 +73,15 @@ export default function PlayersPage() {
           </CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Top-16 Impact Spread</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AnalyticsBarChart data={impactChartRows} xKey="player" yKey="impact" height={310} />
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-2">
         {featured.map((row) => (

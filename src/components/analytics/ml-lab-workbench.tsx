@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, FlaskConical, Info } from "lucide-react";
 
 import { AnalyticsBarChart } from "@/components/charts/analytics-bar-chart";
@@ -18,12 +18,30 @@ import {
   runModel,
   targetOptions,
   type MlModelKind,
+  type ModelReport,
 } from "@/lib/ml/algorithms";
 import { titleCase } from "@/lib/format";
 import type { ModelFeatureRow } from "@/types";
 
 function labelize(value: string) {
   return titleCase(value);
+}
+
+function buildPendingReport(modelKind: MlModelKind, rowCount: number): ModelReport {
+  return {
+    title: "Preparing Model",
+    modelKind,
+    warning: null,
+    metrics: [
+      { label: "Rows", value: rowCount.toString() },
+      { label: "Status", value: "Training" },
+    ],
+    explanation: "Model report is preparing.",
+    featureWeights: [],
+    predictions: [],
+    rules: ["Training model report..."],
+    clusters: [],
+  };
 }
 
 export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
@@ -39,16 +57,35 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
       ? "successful_drive"
       : target;
 
-  const report = useMemo(
-    () =>
-      runModel(rows, {
-        kind: modelKind,
-        target: effectiveTarget,
-        features,
-        trainRatio: trainSplit[0]! / 100,
-      }),
-    [effectiveTarget, features, modelKind, rows, trainSplit]
+  const modelConfig = useMemo(
+    () => ({
+      kind: modelKind,
+      target: effectiveTarget,
+      features,
+      trainRatio: trainSplit[0]! / 100,
+    }),
+    [effectiveTarget, features, modelKind, trainSplit]
   );
+  const [report, setReport] = useState<ModelReport>(() => buildPendingReport(modelKind, rows.length));
+  const [isTraining, setIsTraining] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const train = () => {
+      const nextReport = runModel(rows, modelConfig);
+
+      if (!cancelled) {
+        setReport(nextReport);
+        setIsTraining(false);
+      }
+    };
+    const timeoutId = window.setTimeout(train, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [modelConfig, rows]);
 
   const chartRows = report.featureWeights
     .slice()
@@ -82,7 +119,13 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
           <CardContent className="space-y-5">
             <div className="space-y-2">
               <Label>Algorithm</Label>
-              <Select value={modelKind} onValueChange={(value) => setModelKind(value as MlModelKind)}>
+              <Select
+                value={modelKind}
+                onValueChange={(value) => {
+                  setIsTraining(true);
+                  setModelKind(value as MlModelKind);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -101,7 +144,13 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
 
             <div className="space-y-2">
               <Label>Target Variable</Label>
-              <Select value={target} onValueChange={setTarget}>
+              <Select
+                value={target}
+                onValueChange={(value) => {
+                  setIsTraining(true);
+                  setTarget(value);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -125,7 +174,16 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
                 <Label>Train/Test Split</Label>
                 <span className="font-mono text-xs text-muted-foreground">{trainSplit[0]}%</span>
               </div>
-              <Slider min={55} max={85} step={1} value={trainSplit} onValueChange={setTrainSplit} />
+              <Slider
+                min={55}
+                max={85}
+                step={1}
+                value={trainSplit}
+                onValueChange={(value) => {
+                  setIsTraining(true);
+                  setTrainSplit(value);
+                }}
+              />
             </div>
 
             <div className="space-y-3">
@@ -139,6 +197,8 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
                       <Checkbox
                         checked={checked}
                         onCheckedChange={(value) => {
+                          setIsTraining(true);
+
                           if (value) {
                             setFeatures((current) => [...new Set([...current, feature])]);
                           } else {
@@ -180,7 +240,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-sm">Feature Importance</CardTitle>
-                <Badge variant="outline">{report.title}</Badge>
+                <Badge variant="outline">{isTraining ? "Training..." : report.title}</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -204,6 +264,7 @@ export function MlLabWorkbench({ rows }: { rows: ModelFeatureRow[] }) {
               <Button
                 variant="outline"
                 size="sm"
+                disabled={isTraining}
                 onClick={() => {
                   const blob = new Blob([exportText], { type: "text/plain" });
                   const url = URL.createObjectURL(blob);

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   BrainCircuit,
+  Clapperboard,
   ClipboardList,
   Database,
   FileText,
@@ -23,14 +24,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Command Center", icon: Gauge },
-  { href: "/data", label: "Data Hub", icon: Database },
-  { href: "/stats", label: "Stats Engine", icon: BarChart3 },
-  { href: "/ml-lab", label: "ML Lab", icon: BrainCircuit },
-  { href: "/players", label: "Players", icon: Users },
-  { href: "/opponents", label: "Opponents", icon: Radar },
-  { href: "/games", label: "Games", icon: Trophy },
-  { href: "/strategy", label: "Strategy", icon: Workflow },
+  { href: "/dashboard", label: "Dashboard", icon: Gauge },
+  { href: "/data", label: "Data", icon: Database },
+  { href: "/film", label: "Film Review", icon: Clapperboard },
+  { href: "/stats", label: "Team Performance", icon: BarChart3 },
+  { href: "/ml-lab", label: "Model Evaluation", icon: BrainCircuit },
+  { href: "/players", label: "Player Performance", icon: Users },
+  { href: "/opponents", label: "Opponent Analysis", icon: Radar },
+  { href: "/games", label: "Game Analysis", icon: Trophy },
+  { href: "/strategy", label: "Decision Analysis", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/methodology", label: "Methodology", icon: ShieldQuestion },
 ];
@@ -47,18 +49,31 @@ function NavLink({
   compact?: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const active = pathname === href || pathname.startsWith(`${href}/`);
+  const navigate = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    router.push(href);
+  };
 
   const content = (
     <Link
       href={href}
+      aria-label={compact ? label : undefined}
+      onClick={navigate}
+      onFocus={() => router.prefetch(href)}
+      onMouseEnter={() => router.prefetch(href)}
       className={cn(
         "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
         active && "bg-muted text-foreground ring-1 ring-border",
         compact && "w-9 justify-center px-0"
       )}
     >
-      <Icon className="size-4" />
+      <Icon className="pointer-events-none size-4" />
       {!compact && <span className="truncate">{label}</span>}
     </Link>
   );
@@ -86,6 +101,8 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const editorial = ["/dashboard", "/stats", "/players", "/opponents"].includes(pathname);
   return (
     <div className="min-h-screen bg-background text-foreground">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 border-r bg-card/70 px-3 py-4 backdrop-blur lg:block">
@@ -117,7 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold tracking-normal">Mount Olive SPANAL</div>
               <div className="truncate font-mono text-[11px] text-muted-foreground">
-                Football Analytics Command Center / Demo Data
+                Football Analytics / Demo Data
               </div>
             </div>
           </div>
@@ -129,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="lg:pl-16">
-        <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">{children}</div>
+        <div className={cn("mx-auto w-full px-4 py-5 sm:px-6 lg:px-8", !editorial && "max-w-[1600px]")}>{children}</div>
       </main>
     </div>
   );

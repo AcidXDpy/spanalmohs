@@ -1,539 +1,755 @@
 import type {
   AnalyticsDataset,
   AvailabilityNote,
+  AvailabilityStatus,
   Drive,
+  DriveResult,
   Game,
+  GameResult,
   Opponent,
   Play,
+  PlayType,
   Player,
   PlayerGameStat,
   PracticeRecord,
   ScoutingNote,
   Team,
   TeamGameStat,
+  Unit,
 } from "@/types";
-import { clamp, round } from "@/lib/math";
+import { clamp, mean, ratio, round, sigmoid, sum } from "@/lib/math";
+
+type OffenseSide = Drive["offense"];
+
+type WeightedOption<T> = {
+  value: T;
+  weight: number;
+};
+
+type PositionBlueprint = {
+  position: string;
+  count: number;
+  primaryUnit: Unit;
+  height: [number, number];
+  weight: [number, number];
+  preferredNumbers: number[];
+  archetypes: string[];
+};
+
+type GameSimulation = {
+  game: Game;
+  stat: TeamGameStat;
+  drives: Drive[];
+  plays: Play[];
+};
+
+const DEMO_SEED = 20260708;
+const GAME_COUNT = 36;
+
+function createSeededRandom(seed: number) {
+  let state = seed >>> 0;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const random = createSeededRandom(DEMO_SEED);
+
+function randomBetween(min: number, max: number) {
+  return min + random() * (max - min);
+}
+
+function randomInt(min: number, max: number) {
+  return Math.floor(randomBetween(min, max + 1));
+}
+
+function randomNormal(center = 0, deviation = 1) {
+  const first = Math.max(random(), 0.000001);
+  const second = Math.max(random(), 0.000001);
+  return center + deviation * Math.sqrt(-2 * Math.log(first)) * Math.cos(2 * Math.PI * second);
+}
+
+function choose<T>(items: readonly T[]) {
+  return items[Math.floor(random() * items.length)]!;
+}
+
+function weighted<T>(options: Array<WeightedOption<T>>) {
+  const total = sum(options.map((option) => option.weight));
+  let cursor = random() * total;
+
+  for (const option of options) {
+    cursor -= option.weight;
+
+    if (cursor <= 0) {
+      return option.value;
+    }
+  }
+
+  return options.at(-1)!.value;
+}
+
+function pad(value: number, width = 2) {
+  return String(value).padStart(width, "0");
+}
+
+function slug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function dateForGameIndex(index: number) {
+  const season = 2024 + Math.floor(index / 12);
+  const weekInSeason = index % 12;
+  const date = new Date(Date.UTC(season, 8, 5 + weekInSeason * 7));
+
+  return date.toISOString().slice(0, 10);
+}
+
+function offsetDate(dateText: string, offsetDays: number) {
+  const date = new Date(`${dateText}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
+}
 
 export const team: Team = {
   id: "mount-olive-football",
   sport: "football",
   name: "Mount Olive Football",
   school: "Mount Olive High School",
-  season: "2026 demo season",
+  season: "2024-2026 synthetic performance lab",
   classification: "North Jersey Group 4",
   isDemoData: true,
 };
 
-export const players: Player[] = [
+const firstNames = [
+  "Aiden",
+  "Andre",
+  "Anthony",
+  "Ben",
+  "Brady",
+  "Caleb",
+  "Cameron",
+  "Carter",
+  "Chase",
+  "Christian",
+  "Cole",
+  "Damon",
+  "Daniel",
+  "Darius",
+  "Declan",
+  "Diego",
+  "Dylan",
+  "Eli",
+  "Evan",
+  "Gabriel",
+  "Grayson",
+  "Isaiah",
+  "Jack",
+  "Jalen",
+  "Julian",
+  "Kai",
+  "Leo",
+  "Liam",
+  "Logan",
+  "Lucas",
+  "Marcus",
+  "Mateo",
+  "Miles",
+  "Nate",
+  "Nico",
+  "Noah",
+  "Omar",
+  "Owen",
+  "Parker",
+  "Rafael",
+  "Ryan",
+  "Samir",
+  "Sean",
+  "Theo",
+  "Tyler",
+  "Victor",
+  "Wesley",
+  "Zach",
+];
+
+const lastNames = [
+  "Alston",
+  "Baker",
+  "Bell",
+  "Bennett",
+  "Brooks",
+  "Carter",
+  "Chen",
+  "Costa",
+  "Diaz",
+  "Fischer",
+  "Flores",
+  "Grant",
+  "Green",
+  "Han",
+  "Harris",
+  "Hayes",
+  "Hernandez",
+  "Iyer",
+  "Jackson",
+  "Johnson",
+  "King",
+  "Klein",
+  "Lee",
+  "Lewis",
+  "Lopez",
+  "Martinez",
+  "Miller",
+  "Morrison",
+  "Nguyen",
+  "Patel",
+  "Price",
+  "Reed",
+  "Rinaldi",
+  "Rivera",
+  "Robinson",
+  "Santos",
+  "Shah",
+  "Stein",
+  "Thompson",
+  "Torres",
+  "Velez",
+  "Walker",
+  "Watson",
+  "Williams",
+  "Young",
+];
+
+const rosterBlueprint: PositionBlueprint[] = [
   {
-    id: "p-qb-12",
-    sport: "football",
-    name: "Evan Rinaldi",
-    number: 12,
     position: "QB",
-    classYear: "Senior",
-    heightInches: 74,
-    weightPounds: 188,
+    count: 4,
     primaryUnit: "offense",
-    status: "available",
-    archetype: "Rhythm passer / constraint runner",
+    height: [71, 76],
+    weight: [178, 215],
+    preferredNumbers: [2, 5, 8, 12, 16, 17],
+    archetypes: ["Rhythm passer", "Movement passer", "RPO distributor", "Constraint runner"],
   },
   {
-    id: "p-rb-21",
-    sport: "football",
-    name: "Marcus Bell",
-    number: 21,
     position: "RB",
-    classYear: "Junior",
-    heightInches: 70,
-    weightPounds: 196,
+    count: 6,
     primaryUnit: "offense",
-    status: "available",
-    archetype: "Explosive early-down runner",
+    height: [67, 72],
+    weight: [172, 215],
+    preferredNumbers: [1, 4, 20, 21, 22, 24, 26, 28],
+    archetypes: ["Explosive early-down runner", "Contact-balance runner", "Screen-game outlet", "Short-yardage finisher"],
   },
   {
-    id: "p-wr-4",
-    sport: "football",
-    name: "Noah Stein",
-    number: 4,
     position: "WR",
-    classYear: "Senior",
-    heightInches: 72,
-    weightPounds: 174,
+    count: 11,
     primaryUnit: "offense",
-    status: "available",
-    archetype: "Vertical separator",
+    height: [68, 75],
+    weight: [155, 195],
+    preferredNumbers: [0, 3, 6, 7, 9, 10, 11, 13, 14, 18, 19, 80, 81, 82],
+    archetypes: ["Vertical separator", "Space target", "Slot option runner", "Boundary possession target"],
   },
   {
-    id: "p-wr-7",
-    sport: "football",
-    name: "Kai Morrison",
-    number: 7,
-    position: "WR",
-    classYear: "Junior",
-    heightInches: 71,
-    weightPounds: 168,
-    primaryUnit: "offense",
-    status: "limited",
-    archetype: "Space target / motion asset",
-  },
-  {
-    id: "p-te-88",
-    sport: "football",
-    name: "Owen Velez",
-    number: 88,
     position: "TE",
-    classYear: "Senior",
-    heightInches: 76,
-    weightPounds: 222,
+    count: 5,
     primaryUnit: "offense",
-    status: "available",
-    archetype: "Inline efficiency stabilizer",
+    height: [72, 78],
+    weight: [205, 245],
+    preferredNumbers: [44, 84, 85, 86, 87, 88, 89],
+    archetypes: ["Inline efficiency stabilizer", "Seam target", "Wing-move blocker", "Red-zone matchup"],
   },
   {
-    id: "p-ol-55",
-    sport: "football",
-    name: "Tyler Han",
-    number: 55,
     position: "OL",
-    classYear: "Senior",
-    heightInches: 73,
-    weightPounds: 248,
+    count: 12,
     primaryUnit: "offense",
-    status: "available",
-    archetype: "Run-game anchor",
+    height: [70, 78],
+    weight: [225, 305],
+    preferredNumbers: [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72],
+    archetypes: ["Run-game anchor", "Pass-protection communicator", "Pulling guard", "Edge setter"],
   },
   {
-    id: "p-lb-9",
-    sport: "football",
-    name: "Julian Costa",
-    number: 9,
-    position: "LB",
-    classYear: "Senior",
-    heightInches: 72,
-    weightPounds: 205,
-    primaryUnit: "defense",
-    status: "available",
-    archetype: "Coverage linebacker / pressure finisher",
-  },
-  {
-    id: "p-db-3",
-    sport: "football",
-    name: "Darius King",
-    number: 3,
-    position: "DB",
-    classYear: "Junior",
-    heightInches: 70,
-    weightPounds: 170,
-    primaryUnit: "defense",
-    status: "available",
-    archetype: "Man-match corner",
-  },
-  {
-    id: "p-dl-91",
-    sport: "football",
-    name: "Samir Patel",
-    number: 91,
     position: "DL",
-    classYear: "Senior",
-    heightInches: 74,
-    weightPounds: 236,
+    count: 9,
     primaryUnit: "defense",
-    status: "questionable",
-    archetype: "Interior disruption",
+    height: [70, 77],
+    weight: [205, 285],
+    preferredNumbers: [45, 72, 73, 74, 75, 76, 77, 90, 91, 92, 94, 95, 96, 98],
+    archetypes: ["Interior disruption", "Edge contain defender", "Pressure finisher", "Gap-control tackle"],
   },
   {
-    id: "p-ath-15",
-    sport: "football",
-    name: "Chris Alston",
-    number: 15,
+    position: "LB",
+    count: 8,
+    primaryUnit: "defense",
+    height: [69, 75],
+    weight: [185, 230],
+    preferredNumbers: [4, 9, 15, 31, 32, 33, 34, 40, 41, 42, 43],
+    archetypes: ["Coverage linebacker", "Pressure finisher", "Box trigger", "Run-fit communicator"],
+  },
+  {
+    position: "DB",
+    count: 11,
+    primaryUnit: "defense",
+    height: [67, 74],
+    weight: [155, 195],
+    preferredNumbers: [1, 3, 6, 7, 10, 11, 14, 18, 23, 25, 27, 29, 30],
+    archetypes: ["Man-match corner", "Range safety", "Nickel pressure defender", "Run-support safety"],
+  },
+  {
+    position: "K/P",
+    count: 2,
+    primaryUnit: "special-teams",
+    height: [68, 74],
+    weight: [155, 190],
+    preferredNumbers: [35, 36, 37, 38, 39, 49],
+    archetypes: ["Field-position specialist", "Kickoff hang-time specialist"],
+  },
+  {
     position: "ATH",
-    classYear: "Sophomore",
-    heightInches: 71,
-    weightPounds: 181,
+    count: 4,
     primaryUnit: "two-way",
-    status: "available",
-    archetype: "Two-way leverage player",
+    height: [69, 74],
+    weight: [170, 205],
+    preferredNumbers: [2, 5, 13, 15, 17, 21, 23],
+    archetypes: ["Two-way leverage player", "Motion-package weapon", "Nickel and slot utility", "Special-teams stressor"],
   },
 ];
 
-export const opponents: Opponent[] = [
+function statusForRosterSpot(index: number): AvailabilityStatus {
+  if (index % 29 === 0) {
+    return "questionable";
+  }
+
+  if (index % 17 === 0) {
+    return "limited";
+  }
+
+  if (index % 43 === 0) {
+    return "out";
+  }
+
+  return weighted<AvailabilityStatus>([
+    { value: "available", weight: 82 },
+    { value: "limited", weight: 9 },
+    { value: "questionable", weight: 6 },
+    { value: "out", weight: 3 },
+  ]);
+}
+
+function classYearFor(index: number) {
+  return ["Senior", "Junior", "Sophomore", "Freshman"][(index * 7) % 4]!;
+}
+
+function generatePlayers() {
+  const usedNumbers = new Set<number>();
+  const output: Player[] = [];
+
+  rosterBlueprint.forEach((blueprint) => {
+    for (let depth = 0; depth < blueprint.count; depth += 1) {
+      const globalIndex = output.length;
+      const preferred = blueprint.preferredNumbers.find((number) => !usedNumbers.has(number));
+      const fallback = Array.from({ length: 100 }, (_, number) => number).find((number) => !usedNumbers.has(number));
+      const number = preferred ?? fallback ?? globalIndex;
+      usedNumbers.add(number);
+
+      const first = firstNames[(globalIndex * 5 + depth * 3) % firstNames.length]!;
+      const last = lastNames[(globalIndex * 7 + depth * 11) % lastNames.length]!;
+      const heightInches = randomInt(blueprint.height[0], blueprint.height[1]);
+      const weightPounds = randomInt(blueprint.weight[0], blueprint.weight[1]);
+
+      output.push({
+        id: `p-${slug(blueprint.position)}-${pad(number, 2)}-${pad(depth + 1)}`,
+        sport: "football",
+        name: `${first} ${last}`,
+        number,
+        position: blueprint.position,
+        classYear: classYearFor(globalIndex),
+        heightInches,
+        weightPounds,
+        primaryUnit: blueprint.primaryUnit,
+        status: statusForRosterSpot(globalIndex),
+        archetype: choose(blueprint.archetypes),
+      });
+    }
+  });
+
+  return output;
+}
+
+export const players: Player[] = generatePlayers();
+
+function playersAt(position: string) {
+  return players.filter((player) => player.position === position && player.status !== "out");
+}
+
+function firstPlayerAt(position: string) {
+  return playersAt(position)[0] ?? players.find((player) => player.position === position)!;
+}
+
+function choosePlayerFrom(positionWeights: Array<WeightedOption<string>>) {
+  const position = weighted(positionWeights);
+  const candidates = playersAt(position);
+
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  const depthWeighted = candidates.map((player, index) => ({
+    value: player.id,
+    weight: Math.max(2, 18 - index * 2),
+  }));
+
+  return weighted(depthWeighted);
+}
+
+const opponentNames = [
+  "Randolph",
+  "Roxbury",
+  "Morris Hills",
+  "West Morris",
+  "Chatham",
+  "Sparta",
+  "Delbarton",
+  "Montville",
+  "Mendham",
+  "Parsippany Hills",
+  "Morristown",
+  "Jefferson",
+  "Pequannock",
+  "Vernon",
+  "Lenape Valley",
+  "Hackettstown",
+  "Madison",
+  "Kinnelon",
+  "Pope John",
+  "Lakeland",
+  "Wayne Valley",
+  "Wayne Hills",
+  "River Dell",
+  "Ramapo",
+  "Old Tappan",
+  "Northern Highlands",
+  "Morris Knolls",
+  "Summit",
+  "Cranford",
+  "Warren Hills",
+  "North Hunterdon",
+  "Phillipsburg",
+  "Ridgewood",
+  "Passaic Valley",
+  "Livingston",
+  "Columbia",
+  "Nutley",
+  "Millburn",
+  "Watchung Hills",
+  "Somerville",
+  "Bernards",
+  "High Point",
+];
+
+const opponentStyles = [
   {
-    id: "opp-randolph",
-    sport: "football",
-    name: "Randolph",
-    record: "4-2",
-    style: "Condensed formations, play-action shots",
-    offensivePace: 62,
-    defensivePressure: 71,
-    strengthRating: 0.61,
-    riskProfile: "High pressure on third-and-medium",
+    style: "Condensed formations with play-action shots",
+    risk: "High pressure on third-and-medium",
   },
   {
-    id: "opp-roxbury",
-    sport: "football",
-    name: "Roxbury",
-    record: "3-3",
-    style: "Power run, heavy boxes",
-    offensivePace: 54,
-    defensivePressure: 58,
-    strengthRating: 0.47,
-    riskProfile: "Low variance unless they create short fields",
+    style: "Tempo spread with RPO screens",
+    risk: "Explosive if missed tackles stack early",
   },
   {
-    id: "opp-morris-hills",
-    sport: "football",
-    name: "Morris Hills",
-    record: "2-4",
-    style: "Tempo spread, RPO screens",
-    offensivePace: 76,
-    defensivePressure: 44,
-    strengthRating: 0.38,
-    riskProfile: "Explosive if missed tackles compound",
+    style: "Power run with heavy boxes",
+    risk: "Low variance until they create short fields",
   },
   {
-    id: "opp-west-morris",
-    sport: "football",
-    name: "West Morris",
-    record: "5-1",
-    style: "Option run, field-position control",
-    offensivePace: 50,
-    defensivePressure: 66,
-    strengthRating: 0.72,
-    riskProfile: "Possession drain and fourth-down aggression",
+    style: "Option run with field-position control",
+    risk: "Possession drain and fourth-down aggression",
   },
   {
-    id: "opp-chatham",
-    sport: "football",
-    name: "Chatham",
-    record: "3-4",
-    style: "Balanced 11 personnel",
-    offensivePace: 61,
-    defensivePressure: 52,
-    strengthRating: 0.44,
-    riskProfile: "Good red-zone constraint coverage",
+    style: "Spread passing with simulated pressures",
+    risk: "Can create fast negative scripts",
   },
   {
-    id: "opp-sparta",
-    sport: "football",
-    name: "Sparta",
-    record: "6-1",
-    style: "Spread passing, simulated pressures",
-    offensivePace: 79,
-    defensivePressure: 74,
-    strengthRating: 0.78,
-    riskProfile: "Can create fast negative scripts",
+    style: "Balanced 11 personnel and quarters defense",
+    risk: "Good red-zone constraint coverage",
+  },
+  {
+    style: "Wing-T motion and edge pressure",
+    risk: "Eye discipline and perimeter force stress",
+  },
+  {
+    style: "Multiple-front defense with pressure rotations",
+    risk: "Protection ID and hot-answer stress",
   },
 ];
 
-export const games: Game[] = [
-  {
-    id: "game-01",
-    sport: "football",
-    date: "2026-09-04",
-    week: 1,
-    opponentId: "opp-randolph",
-    location: "home",
-    scoreFor: 28,
-    scoreAgainst: 24,
-    result: "W",
-    winProbabilityStart: 0.49,
-    winProbabilityEnd: 0.93,
-    notes: "Two late explosive passes reversed a negative second-quarter field-position stretch.",
-  },
-  {
-    id: "game-02",
-    sport: "football",
-    date: "2026-09-11",
-    week: 2,
-    opponentId: "opp-roxbury",
-    location: "away",
-    scoreFor: 21,
-    scoreAgainst: 17,
-    result: "W",
-    winProbabilityStart: 0.56,
-    winProbabilityEnd: 0.86,
-    notes: "Drive finish rate offset a below-average explosive play profile.",
-  },
-  {
-    id: "game-03",
-    sport: "football",
-    date: "2026-09-18",
-    week: 3,
-    opponentId: "opp-morris-hills",
-    location: "home",
-    scoreFor: 35,
-    scoreAgainst: 14,
-    result: "W",
-    winProbabilityStart: 0.64,
-    winProbabilityEnd: 0.98,
-    notes: "Best offensive EPA and strongest defensive disruption of the sample.",
-  },
-  {
-    id: "game-04",
-    sport: "football",
-    date: "2026-09-25",
-    week: 4,
-    opponentId: "opp-west-morris",
-    location: "away",
-    scoreFor: 17,
-    scoreAgainst: 27,
-    result: "L",
-    winProbabilityStart: 0.42,
-    winProbabilityEnd: 0.18,
-    notes: "Opponent controlled tempo and created two short-field scoring drives.",
-  },
-  {
-    id: "game-05",
-    sport: "football",
-    date: "2026-10-02",
-    week: 5,
-    opponentId: "opp-chatham",
-    location: "home",
-    scoreFor: 24,
-    scoreAgainst: 20,
-    result: "W",
-    winProbabilityStart: 0.58,
-    winProbabilityEnd: 0.89,
-    notes: "Third-down defense protected a narrow possession advantage.",
-  },
-  {
-    id: "game-06",
-    sport: "football",
-    date: "2026-10-09",
-    week: 6,
-    opponentId: "opp-sparta",
-    location: "neutral",
-    scoreFor: 20,
-    scoreAgainst: 31,
-    result: "L",
-    winProbabilityStart: 0.39,
-    winProbabilityEnd: 0.22,
-    notes: "High-value opponent passing downs exposed protection and coverage depth.",
-  },
-];
+function generateOpponents(): Opponent[] {
+  return opponentNames.map((name, index) => {
+    const style = opponentStyles[index % opponentStyles.length]!;
+    const paceNoise = Math.sin(index * 1.7) * 8 + randomNormal(0, 5);
+    const pressureNoise = Math.cos(index * 1.23) * 9 + randomNormal(0, 6);
+    const strengthBase = 0.36 + (index % 9) * 0.045 + randomNormal(0, 0.055);
+    const strengthRating = round(clamp(strengthBase, 0.24, 0.88), 2);
+    const wins = clamp(Math.round(2 + strengthRating * 8 + randomNormal(0, 1.4)), 0, 10);
+    const losses = clamp(Math.round(9 - wins + randomNormal(0, 1.1)), 0, 9);
 
-export const teamGameStats: TeamGameStat[] = [
-  {
-    id: "tgs-01",
-    gameId: "game-01",
-    plays: 64,
-    yards: 386,
-    offensiveEpa: 8.8,
-    defensiveEpaAllowed: 5.1,
-    successRate: 0.48,
-    explosivePlays: 7,
-    thirdDownAttempts: 12,
-    thirdDownConversions: 6,
-    redZoneTrips: 4,
-    redZoneTouchdowns: 3,
-    turnovers: 1,
-    takeaways: 2,
-    penalties: 6,
-    penaltyYards: 48,
-    averageStartingFieldPosition: 33,
-  },
-  {
-    id: "tgs-02",
-    gameId: "game-02",
-    plays: 59,
-    yards: 318,
-    offensiveEpa: 4.4,
-    defensiveEpaAllowed: 2.9,
-    successRate: 0.44,
-    explosivePlays: 4,
-    thirdDownAttempts: 11,
-    thirdDownConversions: 5,
-    redZoneTrips: 3,
-    redZoneTouchdowns: 3,
-    turnovers: 1,
-    takeaways: 1,
-    penalties: 4,
-    penaltyYards: 35,
-    averageStartingFieldPosition: 31,
-  },
-  {
-    id: "tgs-03",
-    gameId: "game-03",
-    plays: 67,
-    yards: 442,
-    offensiveEpa: 14.6,
-    defensiveEpaAllowed: -2.8,
-    successRate: 0.56,
-    explosivePlays: 9,
-    thirdDownAttempts: 10,
-    thirdDownConversions: 7,
-    redZoneTrips: 5,
-    redZoneTouchdowns: 4,
-    turnovers: 0,
-    takeaways: 3,
-    penalties: 3,
-    penaltyYards: 21,
-    averageStartingFieldPosition: 39,
-  },
-  {
-    id: "tgs-04",
-    gameId: "game-04",
-    plays: 55,
-    yards: 274,
-    offensiveEpa: -1.7,
-    defensiveEpaAllowed: 8.9,
-    successRate: 0.38,
-    explosivePlays: 3,
-    thirdDownAttempts: 13,
-    thirdDownConversions: 4,
-    redZoneTrips: 3,
-    redZoneTouchdowns: 2,
-    turnovers: 2,
-    takeaways: 1,
-    penalties: 7,
-    penaltyYards: 62,
-    averageStartingFieldPosition: 27,
-  },
-  {
-    id: "tgs-05",
-    gameId: "game-05",
-    plays: 61,
-    yards: 341,
-    offensiveEpa: 5.9,
-    defensiveEpaAllowed: 3.8,
-    successRate: 0.46,
-    explosivePlays: 5,
-    thirdDownAttempts: 12,
-    thirdDownConversions: 6,
-    redZoneTrips: 4,
-    redZoneTouchdowns: 3,
-    turnovers: 1,
-    takeaways: 2,
-    penalties: 5,
-    penaltyYards: 41,
-    averageStartingFieldPosition: 34,
-  },
-  {
-    id: "tgs-06",
-    gameId: "game-06",
-    plays: 58,
-    yards: 302,
-    offensiveEpa: 0.8,
-    defensiveEpaAllowed: 11.4,
-    successRate: 0.41,
-    explosivePlays: 4,
-    thirdDownAttempts: 14,
-    thirdDownConversions: 5,
-    redZoneTrips: 3,
-    redZoneTouchdowns: 2,
-    turnovers: 2,
-    takeaways: 1,
-    penalties: 6,
-    penaltyYards: 54,
-    averageStartingFieldPosition: 29,
-  },
-];
+    return {
+      id: `opp-${slug(name)}`,
+      sport: "football",
+      name,
+      record: `${wins}-${losses}`,
+      style: style.style,
+      offensivePace: Math.round(clamp(55 + paceNoise + strengthRating * 18, 42, 88)),
+      defensivePressure: Math.round(clamp(48 + pressureNoise + strengthRating * 26, 31, 91)),
+      strengthRating,
+      riskProfile: style.risk,
+    };
+  });
+}
 
-const driveInputs: Array<Omit<Drive, "id">> = [
-  { gameId: "game-01", offense: "mount-olive", quarter: 1, startYardLine: 25, endYardLine: 100, playCount: 8, yards: 75, result: "touchdown", epa: 4.7, startScoreDiff: 0 },
-  { gameId: "game-01", offense: "mount-olive", quarter: 2, startYardLine: 18, endYardLine: 44, playCount: 6, yards: 26, result: "punt", epa: -0.6, startScoreDiff: 0 },
-  { gameId: "game-01", offense: "mount-olive", quarter: 3, startYardLine: 36, endYardLine: 81, playCount: 7, yards: 45, result: "field-goal", epa: 1.9, startScoreDiff: -3 },
-  { gameId: "game-01", offense: "mount-olive", quarter: 4, startYardLine: 42, endYardLine: 100, playCount: 5, yards: 58, result: "touchdown", epa: 5.1, startScoreDiff: -3 },
-  { gameId: "game-01", offense: "opponent", quarter: 4, startYardLine: 22, endYardLine: 69, playCount: 8, yards: 47, result: "turnover", epa: -2.2, startScoreDiff: 4 },
+export const opponents: Opponent[] = generateOpponents();
 
-  { gameId: "game-02", offense: "mount-olive", quarter: 1, startYardLine: 30, endYardLine: 100, playCount: 9, yards: 70, result: "touchdown", epa: 4.1, startScoreDiff: 0 },
-  { gameId: "game-02", offense: "mount-olive", quarter: 2, startYardLine: 21, endYardLine: 50, playCount: 7, yards: 29, result: "punt", epa: -0.4, startScoreDiff: 0 },
-  { gameId: "game-02", offense: "mount-olive", quarter: 3, startYardLine: 39, endYardLine: 100, playCount: 8, yards: 61, result: "touchdown", epa: 3.8, startScoreDiff: -3 },
-  { gameId: "game-02", offense: "mount-olive", quarter: 4, startYardLine: 47, endYardLine: 100, playCount: 6, yards: 53, result: "touchdown", epa: 4.3, startScoreDiff: -3 },
-  { gameId: "game-02", offense: "opponent", quarter: 4, startYardLine: 25, endYardLine: 62, playCount: 7, yards: 37, result: "downs", epa: -1.6, startScoreDiff: 4 },
+function driveResultWeights(
+  offense: OffenseSide,
+  opponent: Opponent,
+  teamForm: number,
+  startYardLine: number,
+  scoreDiff: number,
+  quarter: number
+): Array<WeightedOption<DriveResult>> {
+  const opponentPower = opponent.strengthRating + opponent.offensivePace / 260;
+  const mountOlivePower = teamForm + 0.24 - opponent.defensivePressure / 260;
+  const rawPower = offense === "mount-olive" ? mountOlivePower : opponentPower - teamForm * 0.16;
+  const scriptBoost =
+    offense === "mount-olive"
+      ? scoreDiff < -10
+        ? 0.09
+        : scoreDiff > 13
+          ? -0.05
+          : 0
+      : scoreDiff > 10
+        ? 0.08
+        : scoreDiff < -13
+          ? -0.05
+          : 0;
+  const fieldBoost = (startYardLine - 25) / 100;
+  const pressureMistake = offense === "mount-olive" ? opponent.defensivePressure / 95 : 0.55;
+  const power = clamp(rawPower + scriptBoost + fieldBoost, 0.12, 0.92);
+  const lateHalf = quarter === 2 || quarter === 4;
 
-  { gameId: "game-03", offense: "mount-olive", quarter: 1, startYardLine: 33, endYardLine: 100, playCount: 6, yards: 67, result: "touchdown", epa: 5.3, startScoreDiff: 0 },
-  { gameId: "game-03", offense: "mount-olive", quarter: 2, startYardLine: 41, endYardLine: 100, playCount: 7, yards: 59, result: "touchdown", epa: 4.8, startScoreDiff: 7 },
-  { gameId: "game-03", offense: "mount-olive", quarter: 3, startYardLine: 38, endYardLine: 100, playCount: 8, yards: 62, result: "touchdown", epa: 4.6, startScoreDiff: 14 },
-  { gameId: "game-03", offense: "mount-olive", quarter: 4, startYardLine: 28, endYardLine: 78, playCount: 7, yards: 50, result: "field-goal", epa: 2.6, startScoreDiff: 21 },
-  { gameId: "game-03", offense: "opponent", quarter: 2, startYardLine: 24, endYardLine: 36, playCount: 5, yards: 12, result: "turnover", epa: -2.8, startScoreDiff: -7 },
+  return [
+    { value: "touchdown", weight: clamp(13 + power * 36 + fieldBoost * 20, 6, 52) },
+    { value: "field-goal", weight: clamp(10 + power * 15 + fieldBoost * 18, 4, 31) },
+    { value: "punt", weight: clamp(34 - power * 20 - fieldBoost * 12, 7, 42) },
+    { value: "turnover", weight: clamp(6 + pressureMistake * 6 - power * 3, 3, 16) },
+    { value: "downs", weight: clamp(6 + (1 - power) * 8 + fieldBoost * 5, 3, 18) },
+    { value: "end-half", weight: lateHalf ? 3 : 0.7 },
+  ];
+}
 
-  { gameId: "game-04", offense: "mount-olive", quarter: 1, startYardLine: 22, endYardLine: 57, playCount: 8, yards: 35, result: "punt", epa: -0.2, startScoreDiff: 0 },
-  { gameId: "game-04", offense: "mount-olive", quarter: 2, startYardLine: 31, endYardLine: 100, playCount: 9, yards: 69, result: "touchdown", epa: 3.7, startScoreDiff: -7 },
-  { gameId: "game-04", offense: "mount-olive", quarter: 3, startYardLine: 44, endYardLine: 77, playCount: 6, yards: 33, result: "turnover", epa: -3.1, startScoreDiff: -3 },
-  { gameId: "game-04", offense: "mount-olive", quarter: 4, startYardLine: 35, endYardLine: 100, playCount: 8, yards: 65, result: "touchdown", epa: 3.6, startScoreDiff: -10 },
-  { gameId: "game-04", offense: "opponent", quarter: 4, startYardLine: 46, endYardLine: 100, playCount: 5, yards: 54, result: "touchdown", epa: 4.9, startScoreDiff: 3 },
+function yardsForDrive(result: DriveResult, startYardLine: number, drivePower: number) {
+  if (result === "touchdown") {
+    return 100 - startYardLine;
+  }
 
-  { gameId: "game-05", offense: "mount-olive", quarter: 1, startYardLine: 29, endYardLine: 82, playCount: 9, yards: 53, result: "field-goal", epa: 2.0, startScoreDiff: 0 },
-  { gameId: "game-05", offense: "mount-olive", quarter: 2, startYardLine: 37, endYardLine: 100, playCount: 7, yards: 63, result: "touchdown", epa: 4.5, startScoreDiff: -4 },
-  { gameId: "game-05", offense: "mount-olive", quarter: 3, startYardLine: 20, endYardLine: 48, playCount: 6, yards: 28, result: "punt", epa: -0.5, startScoreDiff: 3 },
-  { gameId: "game-05", offense: "mount-olive", quarter: 4, startYardLine: 40, endYardLine: 100, playCount: 8, yards: 60, result: "touchdown", epa: 4.2, startScoreDiff: -3 },
-  { gameId: "game-05", offense: "opponent", quarter: 4, startYardLine: 24, endYardLine: 70, playCount: 10, yards: 46, result: "downs", epa: -1.2, startScoreDiff: 4 },
+  if (result === "field-goal") {
+    const end = Math.round(clamp(randomNormal(79 + drivePower * 8, 8), startYardLine + 18, 96));
+    return end - startYardLine;
+  }
 
-  { gameId: "game-06", offense: "mount-olive", quarter: 1, startYardLine: 24, endYardLine: 79, playCount: 8, yards: 55, result: "field-goal", epa: 1.6, startScoreDiff: 0 },
-  { gameId: "game-06", offense: "mount-olive", quarter: 2, startYardLine: 28, endYardLine: 51, playCount: 6, yards: 23, result: "turnover", epa: -2.9, startScoreDiff: -7 },
-  { gameId: "game-06", offense: "mount-olive", quarter: 3, startYardLine: 32, endYardLine: 100, playCount: 9, yards: 68, result: "touchdown", epa: 4.0, startScoreDiff: -14 },
-  { gameId: "game-06", offense: "mount-olive", quarter: 4, startYardLine: 43, endYardLine: 100, playCount: 6, yards: 57, result: "touchdown", epa: 3.5, startScoreDiff: -11 },
-  { gameId: "game-06", offense: "opponent", quarter: 3, startYardLine: 36, endYardLine: 100, playCount: 7, yards: 64, result: "touchdown", epa: 5.2, startScoreDiff: 14 },
-];
+  if (result === "punt") {
+    return Math.round(clamp(randomNormal(23 + drivePower * 18, 17), -9, 58));
+  }
 
-export const drives: Drive[] = driveInputs.map((drive, index) => ({
-  ...drive,
-  id: `${drive.gameId}-drive-${String(index + 1).padStart(2, "0")}`,
-}));
+  if (result === "turnover") {
+    return Math.round(clamp(randomNormal(18 + drivePower * 12, 16), -12, 67));
+  }
 
-const offensivePlayerCycle = [
-  "p-rb-21",
-  "p-qb-12",
-  "p-wr-4",
-  "p-te-88",
-  "p-wr-7",
-  "p-ath-15",
-];
+  if (result === "downs") {
+    return Math.round(clamp(randomNormal(31 + drivePower * 16, 13), 4, 73));
+  }
 
-function playTypeFor(drive: Drive, index: number): Play["playType"] {
-  if (drive.result === "field-goal" && index === drive.playCount - 1) {
+  return Math.round(clamp(randomNormal(11 + drivePower * 8, 10), -5, 40));
+}
+
+function epaForDrive(result: DriveResult, yards: number, startYardLine: number, drivePower: number) {
+  const resultValue: Record<DriveResult, number> = {
+    touchdown: 4.8,
+    "field-goal": 2.1,
+    punt: -0.75,
+    turnover: -3.4,
+    downs: -2.15,
+    "end-half": -0.35,
+  };
+
+  return round(
+    clamp(
+      resultValue[result] + yards * 0.028 + (startYardLine - 25) * 0.018 + drivePower * 0.7 + randomNormal(0, 0.8),
+      -6.6,
+      6.9
+    ),
+    2
+  );
+}
+
+function playTypeForDrive(drive: Drive, opponent: Opponent, index: number, down: number, distance: number): PlayType {
+  const isFinalPlay = index === drive.playCount - 1;
+
+  if (isFinalPlay && drive.result === "field-goal") {
     return "field-goal";
   }
 
-  if (drive.result === "punt" && index === drive.playCount - 1) {
+  if (isFinalPlay && drive.result === "punt") {
     return "punt";
   }
 
-  if (index % 6 === 4) {
-    return "screen";
+  if (random() < 0.038) {
+    return "penalty";
   }
 
-  return index % 2 === 0 ? "run" : "pass";
+  if (drive.offense === "mount-olive") {
+    if (down >= 3 && distance >= 7) {
+      return weighted<PlayType>([
+        { value: "pass", weight: 66 },
+        { value: "screen", weight: 19 },
+        { value: "run", weight: 15 },
+      ]);
+    }
+
+    if (drive.startYardLine >= 80 || drive.quarter >= 4) {
+      return weighted<PlayType>([
+        { value: "run", weight: 42 },
+        { value: "pass", weight: 42 },
+        { value: "screen", weight: 16 },
+      ]);
+    }
+
+    return weighted<PlayType>([
+      { value: "run", weight: 45 },
+      { value: "pass", weight: 42 },
+      { value: "screen", weight: 13 },
+    ]);
+  }
+
+  if (opponent.offensivePace > 72) {
+    return weighted<PlayType>([
+      { value: "pass", weight: 50 },
+      { value: "screen", weight: 23 },
+      { value: "run", weight: 27 },
+    ]);
+  }
+
+  return weighted<PlayType>([
+    { value: "run", weight: 48 },
+    { value: "pass", weight: 38 },
+    { value: "screen", weight: 14 },
+  ]);
 }
 
-function generatePlaysForDrive(drive: Drive): Play[] {
-  let accumulatedYards = 0;
+function playerForPlay(playType: PlayType) {
+  if (playType === "run") {
+    return choosePlayerFrom([
+      { value: "RB", weight: 58 },
+      { value: "QB", weight: 11 },
+      { value: "ATH", weight: 17 },
+      { value: "WR", weight: 14 },
+    ]);
+  }
 
-  return Array.from({ length: drive.playCount }, (_, index) => {
-    const playType = playTypeFor(drive, index);
-    const down = ((index % 4) + 1) as 1 | 2 | 3 | 4;
-    const distance = Math.max(1, 10 - (index % 3) * 2 + (down === 3 ? 1 : 0));
+  if (playType === "pass") {
+    return choosePlayerFrom([
+      { value: "WR", weight: 56 },
+      { value: "TE", weight: 20 },
+      { value: "RB", weight: 12 },
+      { value: "ATH", weight: 12 },
+    ]);
+  }
+
+  if (playType === "screen") {
+    return choosePlayerFrom([
+      { value: "RB", weight: 38 },
+      { value: "WR", weight: 42 },
+      { value: "ATH", weight: 15 },
+      { value: "TE", weight: 5 },
+    ]);
+  }
+
+  if (playType === "field-goal" || playType === "punt") {
+    return firstPlayerAt("K/P").id;
+  }
+
+  return undefined;
+}
+
+function generatePlaysForDrive(drive: Drive, opponent: Opponent) {
+  const output: Play[] = [];
+  let accumulatedYards = 0;
+  let down: 1 | 2 | 3 | 4 = 1;
+  let distance = randomInt(8, 10);
+
+  for (let index = 0; index < drive.playCount; index += 1) {
     const isFinalPlay = index === drive.playCount - 1;
+    const yardLine = Math.round(clamp(drive.startYardLine + accumulatedYards, 1, 99));
+    const playType = playTypeForDrive(drive, opponent, index, down, distance);
+    const remainingPlays = Math.max(1, drive.playCount - index);
+    const remainingYards = drive.yards - accumulatedYards;
+    const baseYards = remainingYards / remainingPlays;
+    const typeAdjustment =
+      playType === "pass" ? 2.4 : playType === "screen" ? 0.7 : playType === "run" ? -0.4 : 0;
+    let yardsGained = Math.round(clamp(randomNormal(baseYards + typeAdjustment, 6.6), -10, 39));
+
+    if (playType === "penalty") {
+      yardsGained = weighted([
+        { value: -15, weight: 11 },
+        { value: -10, weight: 32 },
+        { value: -5, weight: 45 },
+        { value: 5, weight: 7 },
+        { value: 10, weight: 5 },
+      ]);
+    }
+
+    if (isFinalPlay) {
+      if (drive.result === "touchdown") {
+        yardsGained = Math.max(1, 100 - yardLine);
+      } else if (drive.result === "field-goal" || drive.result === "punt") {
+        yardsGained = 0;
+      } else if (drive.result === "turnover") {
+        yardsGained = Math.round(clamp(randomNormal(1, 8), -13, 24));
+      } else if (drive.result === "downs") {
+        yardsGained = Math.max(0, Math.min(distance - 1, Math.round(randomNormal(distance - 2, 3))));
+      }
+    }
+
+    const explosive = playType === "pass" || playType === "screen" ? yardsGained >= 16 : yardsGained >= 11;
     const turnover = drive.result === "turnover" && isFinalPlay;
-    const baseYards = drive.yards / drive.playCount;
-    const variation = ((index % 5) - 2) * (drive.result === "touchdown" ? 2.2 : 1.4);
-    const specialTeamsAdjustment = playType === "punt" || playType === "field-goal" ? -baseYards : 0;
-    const yardsGained = Math.round(
-      clamp(baseYards + variation + specialTeamsAdjustment, turnover ? -8 : -5, 34)
-    );
-    const yardLine = clamp(drive.startYardLine + accumulatedYards, 1, 99);
-    const explosive =
-      (playType === "pass" || playType === "screen") ? yardsGained >= 16 : yardsGained >= 11;
+    const conversion = yardsGained >= distance || yardLine + yardsGained >= 100;
     const success =
-      down === 1
-        ? yardsGained >= 4
-        : down === 2
-          ? yardsGained >= Math.ceil(distance * 0.55)
-          : yardsGained >= distance;
-    const epa = round(
-      drive.epa / drive.playCount +
-        (success ? 0.18 : -0.16) +
-        (explosive ? 0.72 : 0) +
-        (turnover ? -2.5 : 0),
+      playType === "field-goal"
+        ? drive.result === "field-goal"
+        : playType === "punt"
+          ? false
+          : down === 1
+            ? yardsGained >= 4
+            : down === 2
+              ? yardsGained >= Math.ceil(distance * 0.55)
+              : conversion;
+    const playEpa = round(
+      clamp(
+        drive.epa / drive.playCount +
+          (success ? 0.16 : -0.19) +
+          (explosive ? 0.78 : 0) +
+          (turnover ? -2.1 : 0) +
+          (playType === "penalty" ? -0.28 : 0) +
+          randomNormal(0, 0.24),
+        -6.8,
+        6.8
+      ),
       2
     );
 
-    accumulatedYards = clamp(accumulatedYards + Math.max(yardsGained, -4), 0, 99);
-
-    return {
-      id: `${drive.id}-play-${String(index + 1).padStart(2, "0")}`,
+    output.push({
+      id: `${drive.id}-play-${pad(index + 1)}`,
       gameId: drive.gameId,
       driveId: drive.id,
       offense: drive.offense,
@@ -543,193 +759,528 @@ function generatePlaysForDrive(drive: Drive): Play[] {
       yardLine,
       playType,
       yardsGained,
-      epa,
+      epa: playEpa,
       success,
       explosive,
       turnover,
       redZone: yardLine >= 80,
       playerId:
-        drive.offense === "mount-olive" && playType !== "punt" && playType !== "field-goal"
-          ? offensivePlayerCycle[(index + drive.quarter) % offensivePlayerCycle.length]
-          : undefined,
+        drive.offense === "mount-olive" && playType !== "penalty" ? playerForPlay(playType) : undefined,
       scoreDiff: drive.startScoreDiff,
+    });
+
+    accumulatedYards += yardsGained;
+
+    if (conversion) {
+      down = 1;
+      distance = yardLine + yardsGained >= 90 ? Math.max(1, 100 - (yardLine + yardsGained)) : randomInt(8, 10);
+    } else {
+      down = down === 4 ? 1 : ((down + 1) as 1 | 2 | 3 | 4);
+      distance = Math.max(1, distance - yardsGained);
+    }
+  }
+
+  return output;
+}
+
+function gameNotes(result: GameResult, margin: number, opponent: Opponent, stat: TeamGameStat) {
+  if (result === "W" && stat.offensiveEpa > 10) {
+    return `Explosive offensive EPA carried the matchup despite ${opponent.name}'s ${opponent.style.toLowerCase()}.`;
+  }
+
+  if (result === "W" && stat.takeaways > stat.turnovers) {
+    return `Positive turnover value and field position turned a tight ${opponent.name} game toward Mount Olive.`;
+  }
+
+  if (result === "L" && stat.defensiveEpaAllowed > 9) {
+    return `${opponent.name} created too many high-value possessions; defensive EPA allowed was the main separator.`;
+  }
+
+  if (result === "L" && margin > -8) {
+    return `One-score loss with usable efficiency signals. Red-zone and fourth-down choices remain the review focus.`;
+  }
+
+  return `Noisy but useful sample against ${opponent.name}; success rate and pressure answers drove most of the postgame model explanation.`;
+}
+
+function simulateGame(index: number): GameSimulation {
+  const gameId = `game-${pad(index + 1, 3)}`;
+  const opponent = opponents[(index * 7 + 3) % opponents.length]!;
+  const location = (["home", "away", "neutral"] as const)[index % 3]!;
+  const homeAdjustment = location === "home" ? 0.04 : location === "away" ? -0.03 : 0;
+  const seasonGrowth = Math.floor(index / 12) * 0.035;
+  const teamForm = clamp(0.52 + seasonGrowth + Math.sin(index * 0.62) * 0.055 + randomNormal(0, 0.035), 0.38, 0.78);
+  const startWinProbability = round(
+    clamp(sigmoid((teamForm - opponent.strengthRating + homeAdjustment) * 4.1 + randomNormal(0, 0.28)), 0.08, 0.92),
+    2
+  );
+  const totalDrives = Math.round(clamp(randomNormal(22 + (opponent.offensivePace - 60) / 7, 2.8), 18, 30));
+  const firstOffense: OffenseSide = random() > 0.48 ? "mount-olive" : "opponent";
+  const gameDrives: Drive[] = [];
+  const gamePlays: Play[] = [];
+  let scoreFor = 0;
+  let scoreAgainst = 0;
+
+  for (let driveIndex = 0; driveIndex < totalDrives; driveIndex += 1) {
+    const offense: OffenseSide =
+      driveIndex % 2 === 0 ? firstOffense : firstOffense === "mount-olive" ? "opponent" : "mount-olive";
+    const quarter = Math.min(4, Math.floor((driveIndex / totalDrives) * 4) + 1);
+    const scoreDiff = scoreFor - scoreAgainst;
+    const fieldPositionNoise = offense === "mount-olive" ? teamForm * 4 : opponent.strengthRating * 5;
+    const startYardLine = Math.round(clamp(randomNormal(29 + fieldPositionNoise, 10.5), 4, 49));
+    const drivePower =
+      offense === "mount-olive"
+        ? clamp(teamForm + 0.18 - opponent.defensivePressure / 300 + randomNormal(0, 0.08), 0.12, 0.92)
+        : clamp(opponent.strengthRating + opponent.offensivePace / 360 - teamForm * 0.18 + randomNormal(0, 0.08), 0.12, 0.92);
+    const result = weighted(driveResultWeights(offense, opponent, teamForm, startYardLine, scoreDiff, quarter));
+    const yards = yardsForDrive(result, startYardLine, drivePower);
+    const endYardLine = Math.round(clamp(startYardLine + yards, 1, 100));
+    const playCount = Math.round(
+      clamp(
+        result === "touchdown"
+          ? randomNormal(7.5, 2.2)
+          : result === "field-goal"
+            ? randomNormal(7.1, 2)
+            : result === "punt"
+              ? randomNormal(5.1, 1.7)
+              : randomNormal(5.9, 2.1),
+        3,
+        13
+      )
+    );
+    const drive: Drive = {
+      id: `${gameId}-drive-${pad(driveIndex + 1)}`,
+      gameId,
+      offense,
+      quarter,
+      startYardLine,
+      endYardLine,
+      playCount,
+      yards,
+      result,
+      epa: epaForDrive(result, yards, startYardLine, drivePower),
+      startScoreDiff: scoreDiff,
     };
+
+    if (result === "touchdown") {
+      if (offense === "mount-olive") {
+        scoreFor += 7;
+      } else {
+        scoreAgainst += 7;
+      }
+    }
+
+    if (result === "field-goal") {
+      if (offense === "mount-olive") {
+        scoreFor += 3;
+      } else {
+        scoreAgainst += 3;
+      }
+    }
+
+    gameDrives.push(drive);
+    gamePlays.push(...generatePlaysForDrive(drive, opponent));
+  }
+
+  if (scoreFor === scoreAgainst) {
+    if (teamForm + homeAdjustment >= opponent.strengthRating) {
+      scoreFor += 3;
+    } else {
+      scoreAgainst += 3;
+    }
+  }
+
+  const result: Game["result"] = scoreFor > scoreAgainst ? "W" : "L";
+  const margin = scoreFor - scoreAgainst;
+  const mountOlivePlays = gamePlays.filter(
+    (play) => play.offense === "mount-olive" && play.playType !== "punt" && play.playType !== "field-goal"
+  );
+  const opponentPlays = gamePlays.filter(
+    (play) => play.offense === "opponent" && play.playType !== "punt" && play.playType !== "field-goal"
+  );
+  const mountOliveDrives = gameDrives.filter((drive) => drive.offense === "mount-olive");
+  const opponentDrives = gameDrives.filter((drive) => drive.offense === "opponent");
+  const thirdDownPlays = mountOlivePlays.filter((play) => play.down === 3);
+  const redZoneDrives = mountOliveDrives.filter((drive) => drive.startYardLine >= 80 || drive.endYardLine >= 80);
+  const stat: TeamGameStat = {
+    id: `tgs-${pad(index + 1, 3)}`,
+    gameId,
+    plays: mountOlivePlays.length,
+    yards: sum(mountOlivePlays.map((play) => play.yardsGained)),
+    offensiveEpa: round(sum(mountOlivePlays.map((play) => play.epa)), 2),
+    defensiveEpaAllowed: round(sum(opponentPlays.map((play) => play.epa)), 2),
+    successRate: round(ratio(mountOlivePlays.filter((play) => play.success).length, mountOlivePlays.length), 3),
+    explosivePlays: mountOlivePlays.filter((play) => play.explosive).length,
+    thirdDownAttempts: thirdDownPlays.length,
+    thirdDownConversions: thirdDownPlays.filter((play) => play.yardsGained >= play.distance).length,
+    redZoneTrips: redZoneDrives.length,
+    redZoneTouchdowns: redZoneDrives.filter((drive) => drive.result === "touchdown").length,
+    turnovers: mountOliveDrives.filter((drive) => drive.result === "turnover").length,
+    takeaways: opponentDrives.filter((drive) => drive.result === "turnover").length,
+    penalties: mountOlivePlays.filter((play) => play.playType === "penalty").length,
+    penaltyYards: Math.abs(sum(mountOlivePlays.filter((play) => play.playType === "penalty").map((play) => play.yardsGained))),
+    averageStartingFieldPosition: round(mean(mountOliveDrives.map((drive) => drive.startYardLine)), 1),
+  };
+  const finalWinProbability = round(
+    result === "W"
+      ? clamp(0.64 + margin * 0.014 + stat.offensiveEpa * 0.004 + randomNormal(0, 0.035), 0.52, 0.99)
+      : clamp(0.36 + margin * 0.014 - stat.defensiveEpaAllowed * 0.003 + randomNormal(0, 0.035), 0.02, 0.48),
+    2
+  );
+
+  return {
+    game: {
+      id: gameId,
+      sport: "football",
+      date: dateForGameIndex(index),
+      week: index + 1,
+      opponentId: opponent.id,
+      location,
+      scoreFor,
+      scoreAgainst,
+      result,
+      winProbabilityStart: startWinProbability,
+      winProbabilityEnd: finalWinProbability,
+      notes: gameNotes(result, margin, opponent, stat),
+    },
+    stat,
+    drives: gameDrives,
+    plays: gamePlays,
+  };
+}
+
+const simulations = Array.from({ length: GAME_COUNT }, (_, index) => simulateGame(index));
+
+export const games: Game[] = simulations.map((simulation) => simulation.game);
+export const teamGameStats: TeamGameStat[] = simulations.map((simulation) => simulation.stat);
+export const drives: Drive[] = simulations.flatMap((simulation) => simulation.drives);
+export const plays: Play[] = simulations.flatMap((simulation) => simulation.plays);
+
+function depthIndex(player: Player) {
+  return players.filter((candidate) => candidate.position === player.position).findIndex((candidate) => candidate.id === player.id);
+}
+
+function statusAvailability(player: Player, gameIndex: number) {
+  const recurringDip = (gameIndex + player.number) % 13 === 0 ? -0.28 : 0;
+
+  if (player.status === "out") {
+    return clamp(0.12 + recurringDip, 0, 0.3);
+  }
+
+  if (player.status === "questionable") {
+    return clamp(0.62 + recurringDip + randomNormal(0, 0.08), 0.25, 0.82);
+  }
+
+  if (player.status === "limited") {
+    return clamp(0.72 + recurringDip + randomNormal(0, 0.07), 0.36, 0.9);
+  }
+
+  return clamp(0.94 + recurringDip + randomNormal(0, 0.05), 0.62, 1);
+}
+
+function snapBaseline(player: Player) {
+  const baseByPosition: Record<string, number> = {
+    QB: 64,
+    RB: 42,
+    WR: 52,
+    TE: 46,
+    OL: 67,
+    DL: 49,
+    LB: 61,
+    DB: 63,
+    "K/P": 13,
+    ATH: 36,
+  };
+  const depth = depthIndex(player);
+  const multiplier =
+    player.position === "OL"
+      ? depth < 5
+        ? 1
+        : depth < 8
+          ? 0.34
+          : 0.16
+      : player.position === "WR" || player.position === "DB" || player.position === "DL"
+        ? depth < 4
+          ? 0.95
+          : depth < 7
+            ? 0.52
+            : 0.25
+        : depth === 0
+          ? 1
+          : depth === 1
+            ? 0.42
+            : 0.18;
+
+  return (baseByPosition[player.position] ?? 32) * multiplier;
+}
+
+function playerGameKey(gameId: string, playerId: string) {
+  return `${gameId}::${playerId}`;
+}
+
+function generatePlayerGameStats(): PlayerGameStat[] {
+  const playsByPlayerGame = new Map<string, Play[]>();
+
+  plays.forEach((play) => {
+    if (!play.playerId) {
+      return;
+    }
+
+    const key = playerGameKey(play.gameId, play.playerId);
+    playsByPlayerGame.set(key, [...(playsByPlayerGame.get(key) ?? []), play]);
+  });
+
+  return games.flatMap((game, gameIndex) => {
+    const stat = teamGameStats.find((item) => item.gameId === game.id)!;
+    const gamePlays = plays.filter((play) => play.gameId === game.id);
+    const mountOlivePlays = gamePlays.filter((play) => play.offense === "mount-olive");
+    const opponentPlayCount = gamePlays.filter((play) => play.offense === "opponent").length;
+    const passLikeYards = sum(
+      mountOlivePlays
+        .filter((play) => play.playType === "pass" || play.playType === "screen")
+        .map((play) => Math.max(0, play.yardsGained))
+    );
+    const teamNet = stat.offensiveEpa - stat.defensiveEpaAllowed;
+
+    return players.map((player) => {
+      const depth = depthIndex(player);
+      const availability = statusAvailability(player, gameIndex);
+      const snapWave = 1 + Math.sin((gameIndex + player.number) * 0.53) * 0.08;
+      const snaps = Math.max(0, Math.round(snapBaseline(player) * availability * snapWave + randomNormal(0, 3)));
+      const directPlays = playsByPlayerGame.get(playerGameKey(game.id, player.id)) ?? [];
+      const directYards = sum(directPlays.map((play) => Math.max(-5, play.yardsGained)));
+      const qbShare = player.position === "QB" && depth === 0 ? 0.72 : player.position === "QB" && depth === 1 ? 0.18 : 0;
+      const qbOpportunities = Math.round(qbShare * mountOlivePlays.filter((play) => play.playType === "pass").length);
+      const offensiveRoleUsage =
+        player.position === "OL"
+          ? Math.round(snaps * 0.09)
+          : player.position === "K/P"
+            ? directPlays.length
+            : directPlays.length + qbOpportunities;
+      const opportunities = Math.max(0, offensiveRoleUsage);
+      const yards =
+        player.position === "QB"
+          ? Math.round(qbShare * passLikeYards + directYards * 0.75)
+          : Math.max(0, Math.round(directYards));
+      const defensiveRole = player.primaryUnit === "defense" || player.primaryUnit === "two-way";
+      const tackles = defensiveRole
+        ? Math.max(
+            0,
+            Math.round(
+              opponentPlayCount *
+                (player.position === "LB" ? 0.085 : player.position === "DB" ? 0.052 : player.position === "DL" ? 0.041 : 0.026) *
+                availability *
+                (depth < 3 ? 1 : 0.54) +
+                randomNormal(0, 1.2)
+            )
+          )
+        : 0;
+      const disruptionPlays = defensiveRole
+        ? Math.max(
+            0,
+            Math.round(
+              opponentPlayCount *
+                (player.position === "DL" ? 0.032 : player.position === "LB" ? 0.023 : player.position === "DB" ? 0.012 : 0.008) *
+                availability *
+                (depth < 4 ? 1 : 0.46) +
+                randomNormal(0, 0.8)
+            )
+          )
+        : 0;
+      const touchdowns =
+        opportunities > 0
+          ? Math.max(0, Math.round((yards / 92 + opportunities / 18 + randomNormal(-0.35, 0.5)) * 0.58))
+          : 0;
+      const offensiveEpa = sum(directPlays.map((play) => play.epa)) + (player.position === "QB" ? stat.offensiveEpa * qbShare * 0.28 : 0);
+      const defensiveEpa = defensiveRole ? tackles * 0.12 + disruptionPlays * 0.42 - stat.defensiveEpaAllowed * 0.018 : 0;
+      const epaContribution = round(clamp(offensiveEpa + defensiveEpa + randomNormal(0, 0.35), -4.4, 6.8), 2);
+      const assignmentGrade = round(
+        clamp(70 + epaContribution * 2.8 + availability * 8 + snaps / 18 + randomNormal(0, 3.4), 48, 98),
+        1
+      );
+
+      return {
+        id: `${game.id}-${player.id}`,
+        gameId: game.id,
+        playerId: player.id,
+        snaps,
+        opportunities,
+        yards,
+        touchdowns,
+        tackles,
+        disruptionPlays,
+        epaContribution,
+        onFieldNetEpa: round(teamNet + epaContribution * 0.85 + randomNormal(0, 2.1), 2),
+        assignmentGrade,
+      };
+    });
   });
 }
 
-export const plays: Play[] = drives.flatMap(generatePlaysForDrive);
+export const playerGameStats: PlayerGameStat[] = generatePlayerGameStats();
 
-const trackedPlayerIds = [
-  "p-qb-12",
-  "p-rb-21",
-  "p-wr-4",
-  "p-wr-7",
-  "p-te-88",
-  "p-lb-9",
-  "p-db-3",
-  "p-dl-91",
-  "p-ath-15",
+const noteCategories = [
+  "Protection risk",
+  "Coverage leverage",
+  "Tempo constraint",
+  "Explosive prevention",
+  "Red-zone tendency",
+  "Third-down plan",
+  "Player usage",
+  "Practice carryover",
 ];
 
-const playerBase: Record<
-  string,
-  { snaps: number; opportunities: number; yards: number; tackles: number; disruption: number; epa: number }
-> = {
-  "p-qb-12": { snaps: 58, opportunities: 27, yards: 214, tackles: 0, disruption: 0, epa: 4.1 },
-  "p-rb-21": { snaps: 43, opportunities: 18, yards: 102, tackles: 0, disruption: 0, epa: 2.7 },
-  "p-wr-4": { snaps: 45, opportunities: 8, yards: 77, tackles: 0, disruption: 0, epa: 2.1 },
-  "p-wr-7": { snaps: 32, opportunities: 6, yards: 48, tackles: 0, disruption: 0, epa: 1.1 },
-  "p-te-88": { snaps: 50, opportunities: 5, yards: 36, tackles: 0, disruption: 0, epa: 1.4 },
-  "p-lb-9": { snaps: 56, opportunities: 0, yards: 0, tackles: 8, disruption: 3, epa: 2.2 },
-  "p-db-3": { snaps: 53, opportunities: 0, yards: 0, tackles: 5, disruption: 2, epa: 1.6 },
-  "p-dl-91": { snaps: 40, opportunities: 0, yards: 0, tackles: 4, disruption: 2, epa: 1.3 },
-  "p-ath-15": { snaps: 36, opportunities: 5, yards: 42, tackles: 3, disruption: 1, epa: 1.5 },
-};
+function generateScoutingNotes(): ScoutingNote[] {
+  const notes: ScoutingNote[] = [];
 
-export const playerGameStats: PlayerGameStat[] = games.flatMap((game, gameIndex) => {
-  const gameStat = teamGameStats.find((stat) => stat.gameId === game.id);
-  const teamEfficiency = gameStat?.successRate ?? 0.44;
-  const resultBoost = game.result === "W" ? 0.3 : -0.35;
-
-  return trackedPlayerIds.map((playerId, playerIndex) => {
-    const base = playerBase[playerId]!;
-    const wave = ((gameIndex + playerIndex) % 4) - 1.5;
-    const availabilityDrag = playerId === "p-dl-91" && gameIndex >= 4 ? -0.45 : 0;
-    const opportunities =
-      base.opportunities > 0 ? Math.max(1, Math.round(base.opportunities + wave)) : 0;
-    const yards =
-      base.yards > 0
-        ? Math.max(0, Math.round(base.yards * (0.84 + teamEfficiency + wave * 0.04)))
-        : 0;
-    const epaContribution = round(base.epa + resultBoost + wave * 0.22 + availabilityDrag, 2);
-
-    return {
-      id: `${game.id}-${playerId}`,
-      gameId: game.id,
-      playerId,
-      snaps: Math.max(12, Math.round(base.snaps + wave * 4 + (playerId === "p-wr-7" ? -3 : 0))),
-      opportunities,
-      yards,
-      touchdowns:
-        opportunities > 0 && (gameIndex + playerIndex) % 3 === 0
-          ? 1
-          : playerId === "p-lb-9" && gameIndex === 2
-            ? 1
-            : 0,
-      tackles: Math.max(0, Math.round(base.tackles + wave)),
-      disruptionPlays: Math.max(0, Math.round(base.disruption + wave * 0.4)),
-      epaContribution,
-      onFieldNetEpa: round(epaContribution + (teamEfficiency - 0.42) * 8, 2),
-      assignmentGrade: round(clamp(78 + epaContribution * 2.4 + wave * 1.2, 61, 97), 1),
-    };
+  opponents.forEach((opponent, index) => {
+    notes.push({
+      id: `note-opp-${pad(index + 1, 3)}-pressure`,
+      sport: "football",
+      opponentId: opponent.id,
+      category: "Pressure profile",
+      note: `${opponent.name} blends ${opponent.style.toLowerCase()} with a ${opponent.defensivePressure}/100 pressure marker. Motion, quick-game answers, and protection ID should be installed early in the week.`,
+      confidence: round(clamp(0.52 + opponent.strengthRating * 0.34 + randomNormal(0, 0.04), 0.46, 0.88), 2),
+    });
+    notes.push({
+      id: `note-opp-${pad(index + 1, 3)}-pace`,
+      sport: "football",
+      opponentId: opponent.id,
+      category: "Pace tendency",
+      note: `Pace index ${opponent.offensivePace} suggests ${
+        opponent.offensivePace > 72 ? "defensive communication and rotation depth" : "possession discipline and early-down leverage"
+      } matter more than raw yardage allowed.`,
+      confidence: round(clamp(0.49 + randomNormal(0.13, 0.06), 0.42, 0.83), 2),
+    });
   });
-});
 
-export const scoutingNotes: ScoutingNote[] = [
-  {
-    id: "note-01",
-    sport: "football",
-    opponentId: "opp-sparta",
-    category: "Protection risk",
-    note: "Sparta generated pressure on 43% of simulated-pressure snaps in the sample. Slide protection toward the boundary nickel on third-and-6 plus.",
-    confidence: 0.71,
-  },
-  {
-    id: "note-02",
-    sport: "football",
-    opponentId: "opp-west-morris",
-    category: "Tempo constraint",
-    note: "West Morris reduces total possessions. First-down success above 45% is the main threshold for avoiding a negative possession script.",
-    confidence: 0.77,
-  },
-  {
-    id: "note-03",
-    sport: "football",
-    playerId: "p-rb-21",
-    category: "Player usage",
-    note: "Bell's efficiency climbs when his first two carries in a series include at least one gap-scheme concept. Outside zone volume has been less stable.",
-    confidence: 0.66,
-  },
-  {
-    id: "note-04",
-    sport: "football",
-    playerId: "p-db-3",
-    category: "Coverage leverage",
-    note: "King has allowed fewer explosive plays when aligned with inside shade against reduced splits. Maintain safety rotation help only against switch releases.",
-    confidence: 0.63,
-  },
-  {
-    id: "note-05",
-    sport: "football",
-    gameId: "game-04",
-    category: "Postgame review",
-    note: "The loss was driven less by total efficiency than by turnover timing and short-field leverage. Removing the third-quarter turnover lifts estimated win probability by 18 points.",
-    confidence: 0.7,
-  },
+  players
+    .filter((player) => player.primaryUnit !== "special-teams")
+    .slice(0, 54)
+    .forEach((player, index) => {
+      notes.push({
+        id: `note-player-${pad(index + 1, 3)}`,
+        sport: "football",
+        playerId: player.id,
+        category: choose(noteCategories),
+        note: `${player.name} profiles as a ${player.archetype.toLowerCase()}. Current synthetic trend suggests ${
+          player.primaryUnit === "defense" ? "package-specific usage against tempo and condensed sets" : "workload tuned by down, distance, and field zone"
+        }.`,
+        confidence: round(clamp(0.48 + random() * 0.34, 0.48, 0.86), 2),
+      });
+    });
+
+  games.forEach((game, index) => {
+    notes.push({
+      id: `note-game-${pad(index + 1, 3)}`,
+      sport: "football",
+      gameId: game.id,
+      category: "Postgame review",
+      note: game.notes,
+      confidence: round(clamp(0.54 + Math.abs(game.scoreFor - game.scoreAgainst) / 70 + randomNormal(0, 0.05), 0.48, 0.89), 2),
+    });
+  });
+
+  return notes;
+}
+
+export const scoutingNotes: ScoutingNote[] = generateScoutingNotes();
+
+const practicePeriods = [
+  "Inside Run",
+  "Third Down",
+  "Red Zone",
+  "Two-Minute",
+  "Screen Answers",
+  "Pass Protection",
+  "Coverage Fits",
+  "Special Teams",
+  "Scout Offense",
+  "Open-Field Tackling",
+  "Goal Line",
+  "Turnover Circuit",
 ];
 
-export const practiceRecords: PracticeRecord[] = [
-  {
-    id: "practice-01",
-    sport: "football",
-    date: "2026-09-29",
-    period: "Inside run",
-    focus: "Gap-scheme fits versus odd front",
-    executionScore: 84,
-    notes: "First group created cleaner double-team movement after cadence adjustment.",
-  },
-  {
-    id: "practice-02",
-    sport: "football",
-    date: "2026-09-30",
-    period: "Third down",
-    focus: "Protection versus simulated pressure",
-    executionScore: 73,
-    notes: "Backside B-gap pickup remains the largest protection risk.",
-  },
-  {
-    id: "practice-03",
-    sport: "football",
-    date: "2026-10-01",
-    period: "Red zone",
-    focus: "Compressed field route spacing",
-    executionScore: 81,
-    notes: "Best outcomes came from motion to identify leverage before the snap.",
-  },
-  {
-    id: "practice-04",
-    sport: "football",
-    date: "2026-10-06",
-    period: "Scout offense",
-    focus: "Sparta tempo and switch releases",
-    executionScore: 76,
-    notes: "Defensive communication improved after simplifying the trips check.",
-  },
+const practiceFocus = [
+  "Gap-scheme fits versus odd front",
+  "Protection versus simulated pressure",
+  "Compressed-field route spacing",
+  "Tempo communication and substitution",
+  "Perimeter force and crack replace",
+  "Motion identification and leverage checks",
+  "Run-pass conflict discipline",
+  "Kickoff lane integrity",
+  "Boundary shot prevention",
+  "Fourth-down decision situations",
+  "Backside pursuit angles",
+  "Ball-security response after contact",
 ];
 
-export const availabilityNotes: AvailabilityNote[] = [
-  {
-    id: "availability-01",
-    playerId: "p-wr-7",
-    date: "2026-10-02",
-    status: "limited",
-    note: "Managed lower-body workload. Available for scripted motion packages.",
-  },
-  {
-    id: "availability-02",
-    playerId: "p-dl-91",
-    date: "2026-10-09",
-    status: "questionable",
-    note: "Practice reps limited. Pass-rush burst below season baseline.",
-  },
-  {
-    id: "availability-03",
-    playerId: "p-qb-12",
-    date: "2026-10-09",
-    status: "available",
-    note: "Full participant. Throwing volume normal.",
-  },
-];
+function generatePracticeRecords(): PracticeRecord[] {
+  return games.flatMap((game, gameIndex) =>
+    Array.from({ length: 4 }, (_, periodIndex) => {
+      const period = practicePeriods[(gameIndex + periodIndex * 3) % practicePeriods.length]!;
+      const focus = practiceFocus[(gameIndex * 2 + periodIndex * 5) % practiceFocus.length]!;
+      const score = round(
+        clamp(72 + (teamGameStats[gameIndex]?.successRate ?? 0.43) * 22 + randomNormal(0, 7), 55, 96),
+        1
+      );
+
+      return {
+        id: `practice-${pad(gameIndex + 1, 3)}-${pad(periodIndex + 1)}`,
+        sport: "football",
+        date: offsetDate(game.date, -4 + periodIndex),
+        period,
+        focus,
+        executionScore: score,
+        notes:
+          score >= 85
+            ? "First group translated the scout look into clean, repeatable answers."
+            : score >= 74
+              ? "Usable period with a few leverage and communication corrections for film."
+              : "Install needs another walk-through and tighter assignment confirmation.",
+      };
+    })
+  );
+}
+
+export const practiceRecords: PracticeRecord[] = generatePracticeRecords();
+
+function generateAvailabilityNotes(): AvailabilityNote[] {
+  return players.flatMap((player, playerIndex) => {
+    const noteCount = player.status === "available" ? 2 : 4;
+
+    return Array.from({ length: noteCount }, (_, noteIndex) => {
+      const game = games[(playerIndex * 3 + noteIndex * 7) % games.length]!;
+      const status =
+        noteIndex === noteCount - 1
+          ? player.status
+          : weighted<AvailabilityStatus>([
+              { value: "available", weight: player.status === "available" ? 80 : 38 },
+              { value: "limited", weight: 26 },
+              { value: "questionable", weight: 12 },
+              { value: "out", weight: player.status === "out" ? 18 : 3 },
+            ]);
+
+      return {
+        id: `availability-${pad(playerIndex + 1, 3)}-${pad(noteIndex + 1)}`,
+        playerId: player.id,
+        date: offsetDate(game.date, -2 + noteIndex),
+        status,
+        note:
+          status === "available"
+            ? "Full participant with workload inside expected weekly band."
+            : status === "limited"
+              ? "Managed workload; available for package-specific reps and controlled volume."
+              : status === "questionable"
+                ? "Practice output below baseline; staff should confirm role before kickoff."
+                : "Held out of contact periods and removed from active weekly projection.",
+      };
+    });
+  });
+}
+
+export const availabilityNotes: AvailabilityNote[] = generateAvailabilityNotes();
 
 export const sampleFootballDataset: AnalyticsDataset = {
   team,
@@ -743,5 +1294,5 @@ export const sampleFootballDataset: AnalyticsDataset = {
   scoutingNotes,
   practiceRecords,
   availabilityNotes,
-  generatedAt: "2026-07-07T17:30:00-04:00",
+  generatedAt: "2026-07-08T11:15:00-04:00",
 };

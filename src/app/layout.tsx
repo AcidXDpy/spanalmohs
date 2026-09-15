@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+import "./cinematic.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Mount Olive SPANAL",
   description:
-    "A high-school sports analytics command center for performance tracking, scouting, player intelligence, and machine-learning analysis.",
+    "A high-school sports analytics application for performance tracking, scouting, player evaluation, and statistical modeling.",
 };
 
 export default function RootLayout({

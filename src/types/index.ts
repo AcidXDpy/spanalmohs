@@ -1,4 +1,4 @@
-export type SportKey = "football" | "basketball" | "tennis" | "robotics";
+export type SportKey = "football" | "flag-football" | "basketball" | "hockey" | "tennis" | "robotics";
 
 export type Unit = "offense" | "defense" | "special-teams" | "two-way";
 
@@ -119,6 +119,102 @@ export interface Play {
   redZone: boolean;
   playerId?: string;
   scoreDiff: number;
+}
+
+export type VideoSourceType = "upload" | "hudl" | "sideline" | "broadcast" | "demo";
+
+export type VideoProcessingStatus = "ready" | "processing" | "needs-review" | "complete";
+
+export type FilmAutomationLevel = "manual" | "semi-automated" | "computer-vision";
+
+export type FilmClipOutcome =
+  | "gain"
+  | "negative"
+  | "first-down"
+  | "touchdown"
+  | "turnover"
+  | "penalty"
+  | "punt"
+  | "field-goal";
+
+export type AutomationSource =
+  | "scoreboard-ocr"
+  | "audio-whistle"
+  | "field-marker"
+  | "possession-segmentation"
+  | "model-fusion";
+
+export type VisionDetectionType =
+  | "jersey"
+  | "formation"
+  | "motion"
+  | "ball-carrier"
+  | "coverage"
+  | "pressure";
+
+export interface VideoAsset {
+  id: string;
+  sport: SportKey;
+  title: string;
+  externalUrl?: string;
+  gameId?: string;
+  opponentId?: string;
+  recordedAt: string;
+  durationSeconds: number;
+  sourceType: VideoSourceType;
+  status: VideoProcessingStatus;
+  cameraAngle: string;
+  resolution: string;
+}
+
+export interface FilmClip {
+  id: string;
+  videoId: string;
+  gameId?: string;
+  startTime: number;
+  endTime: number;
+  quarter: number;
+  down: 1 | 2 | 3 | 4;
+  distance: number;
+  yardLine: number;
+  playType: PlayType;
+  yardsGained: number;
+  outcome: FilmClipOutcome;
+  playerIds: string[];
+  tags: string[];
+  notes: string;
+  epa: number;
+  success: boolean;
+  explosive: boolean;
+  confidence: number;
+  automationLevel: FilmAutomationLevel;
+}
+
+export interface FilmAutomationSuggestion {
+  id: string;
+  clipId: string;
+  source: AutomationSource;
+  label: string;
+  suggestedFields: Partial<
+    Pick<
+      FilmClip,
+      "quarter" | "down" | "distance" | "yardLine" | "playType" | "yardsGained" | "outcome" | "startTime" | "endTime"
+    >
+  >;
+  confidence: number;
+  rationale: string;
+}
+
+export interface VisionDetection {
+  id: string;
+  clipId: string;
+  type: VisionDetectionType;
+  label: string;
+  playerId?: string;
+  confidence: number;
+  frameTime: number;
+  x: number;
+  y: number;
 }
 
 export interface PlayerGameStat {

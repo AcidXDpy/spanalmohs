@@ -1,6 +1,5 @@
 import type {
   AnalyticsDataset,
-  Game,
   MetricResult,
   ModelFeatureRow,
   Play,
@@ -26,12 +25,31 @@ function mountOliveDrives(dataset: AnalyticsDataset) {
   return dataset.drives.filter((drive) => drive.offense === "mount-olive");
 }
 
-function gameStat(dataset: AnalyticsDataset, gameId: string) {
-  return dataset.teamGameStats.find((stat) => stat.gameId === gameId);
+function indexBy<T, K extends string | number>(items: T[], keyFor: (item: T) => K) {
+  const index = new Map<K, T>();
+
+  for (const item of items) {
+    index.set(keyFor(item), item);
+  }
+
+  return index;
 }
 
-function gameOpponentStrength(dataset: AnalyticsDataset, game: Game) {
-  return dataset.opponents.find((opponent) => opponent.id === game.opponentId)?.strengthRating ?? 0.5;
+function groupBy<T, K extends string | number>(items: T[], keyFor: (item: T) => K) {
+  const groups = new Map<K, T[]>();
+
+  for (const item of items) {
+    const key = keyFor(item);
+    const group = groups.get(key);
+
+    if (group) {
+      group.push(item);
+    } else {
+      groups.set(key, [item]);
+    }
+  }
+
+  return groups;
 }
 
 function metric(
@@ -64,15 +82,18 @@ function metric(
 }
 
 export function getGameTrendData(dataset: AnalyticsDataset) {
+  const statsByGameId = indexBy(dataset.teamGameStats, (stat) => stat.gameId);
+  const opponentsById = indexBy(dataset.opponents, (opponent) => opponent.id);
+
   return dataset.games.map((game) => {
-    const stat = gameStat(dataset, game.id);
-    const opponent = getOpponentName(game.opponentId, dataset);
-    const strength = gameOpponentStrength(dataset, game);
+    const stat = statsByGameId.get(game.id);
+    const opponent = opponentsById.get(game.opponentId);
+    const strength = opponent?.strengthRating ?? 0.5;
     const netEfficiency = (stat?.offensiveEpa ?? 0) - (stat?.defensiveEpaAllowed ?? 0);
 
     return {
       week: `W${game.week}`,
-      opponent,
+      opponent: opponent?.name ?? "Unknown Opponent",
       result: game.result,
       score: `${game.scoreFor}-${game.scoreAgainst}`,
       winProbability: round(game.winProbabilityEnd * 100, 1),
@@ -90,6 +111,9 @@ export function calculateTeamMetrics(dataset: AnalyticsDataset): MetricResult[] 
   const plays = mountOlivePlays(dataset);
   const drives = mountOliveDrives(dataset);
   const stats = dataset.teamGameStats;
+  const statsByGameId = indexBy(stats, (stat) => stat.gameId);
+  const opponentsById = indexBy(dataset.opponents, (opponent) => opponent.id);
+  const drivesByGameId = groupBy(drives, (drive) => drive.gameId);
   const gameCount = dataset.games.length;
   const playConfidence = confidenceFromSampleSize(plays.length, 450);
   const gameConfidence = confidenceFromSampleSize(gameCount, 12);
@@ -107,7 +131,7 @@ export function calculateTeamMetrics(dataset: AnalyticsDataset): MetricResult[] 
   const successRateTrend = stats.map((stat) => stat.successRate);
   const explosiveRateTrend = stats.map((stat) => ratio(stat.explosivePlays, stat.plays));
   const driveEfficiencyTrend = dataset.games.map((game) => {
-    const gameDrives = drives.filter((drive) => drive.gameId === game.id);
+    const gameDrives = drivesByGameId.get(game.id) ?? [];
     return ratio(
       gameDrives.filter((drive) => drive.result === "touchdown" || drive.result === "field-goal").length,
       gameDrives.length
@@ -117,13 +141,14 @@ export function calculateTeamMetrics(dataset: AnalyticsDataset): MetricResult[] 
   const thirdDownTrend = stats.map((stat) => ratio(stat.thirdDownConversions, stat.thirdDownAttempts));
   const turnoverTrend = stats.map((stat) => stat.takeaways - stat.turnovers);
   const opponentAdjustedTrend = dataset.games.map((game) => {
-    const stat = gameStat(dataset, game.id);
-    const strength = gameOpponentStrength(dataset, game);
+    const stat = statsByGameId.get(game.id);
+    const strength = opponentsById.get(game.opponentId)?.strengthRating ?? 0.5;
     return (stat?.offensiveEpa ?? 0) / Math.max(stat?.plays ?? 1, 1) + (strength - 0.5) * 0.12;
   });
-  const sosTrend = dataset.games.map((game) => gameOpponentStrength(dataset, game));
-  const playerImpactTrend = getPlayerImpactRows(dataset).slice(0, 6).map((row) => row.impactScore);
-  const reliabilityTrend = getPlayerImpactRows(dataset).slice(0, 6).map((row) => row.reliability);
+  const sosTrend = dataset.games.map((game) => opponentsById.get(game.opponentId)?.strengthRating ?? 0.5);
+  const playerImpactRows = getPlayerImpactRows(dataset);
+  const playerImpactTrend = playerImpactRows.slice(0, 6).map((row) => row.impactScore);
+  const reliabilityTrend = playerImpactRows.slice(0, 6).map((row) => row.reliability);
   const momentumTrend = stats.map((stat, index) => {
     const previous = stats[index - 1];
     if (!previous) {
@@ -132,8 +157,10 @@ export function calculateTeamMetrics(dataset: AnalyticsDataset): MetricResult[] 
 
     return stat.offensiveEpa - previous.offensiveEpa - (stat.defensiveEpaAllowed - previous.defensiveEpaAllowed);
   });
-  const volatilityTrend = stats.map((stat) => Math.abs(stat.offensiveEpa - mean(stats.map((item) => item.offensiveEpa))));
-  const consistencyTrend = stats.map((stat) => 100 - Math.abs(stat.successRate - mean(successRateTrend)) * 220);
+  const averageOffensiveEpa = mean(stats.map((item) => item.offensiveEpa));
+  const averageSuccessRate = mean(successRateTrend);
+  const volatilityTrend = stats.map((stat) => Math.abs(stat.offensiveEpa - averageOffensiveEpa));
+  const consistencyTrend = stats.map((stat) => 100 - Math.abs(stat.successRate - averageSuccessRate) * 220);
   const gameControlTrend = getGameTrendData(dataset).map((row) => row.gameControl);
   const fieldPositionTrend = stats.map((stat) => (stat.averageStartingFieldPosition - 25) * 0.12);
   const situationalEfficiencyTrend = getSituationalEfficiency(dataset)
@@ -377,33 +404,51 @@ export function getMetricByKey(dataset: AnalyticsDataset, key: string) {
 }
 
 export function getPlayerImpactRows(dataset: AnalyticsDataset) {
+  const teamNetAverage = mean(
+    dataset.teamGameStats.map((row) => row.offensiveEpa - row.defensiveEpaAllowed)
+  );
+  const statsByPlayerId = groupBy(dataset.playerGameStats, (stat) => stat.playerId);
+
   return dataset.players
     .map((player) => {
-      const rows = dataset.playerGameStats.filter((stat) => stat.playerId === player.id);
+      const rows = statsByPlayerId.get(player.id) ?? [];
       const epaValues = rows.map((row) => row.epaContribution);
+      const gamesPlayed = Math.max(rows.length, 1);
       const totalSnaps = sum(rows.map((row) => row.snaps));
       const usage = sum(rows.map((row) => row.opportunities));
       const disruption = sum(rows.map((row) => row.disruptionPlays));
       const tackles = sum(rows.map((row) => row.tackles));
       const epa = sum(epaValues);
       const grade = mean(rows.map((row) => row.assignmentGrade));
+      const epaPerGame = epa / gamesPlayed;
+      const usagePerGame = usage / gamesPlayed;
+      const disruptionPerGame = disruption / gamesPlayed;
+      const tacklesPerGame = tackles / gamesPlayed;
+      const snapShare = ratio(totalSnaps, gamesPlayed * 70);
       const availabilityPenalty =
         player.status === "available" ? 0 : player.status === "limited" ? 4 : player.status === "questionable" ? 8 : 14;
       const volatility = standardDeviation(epaValues);
       const impactScore = clamp(
-        52 + epa * 2.2 + grade * 0.18 + usage * 0.35 + disruption * 1.8 + tackles * 0.25 - availabilityPenalty,
+        42 +
+          epaPerGame * 5.8 +
+          (grade - 68) * 0.58 +
+          usagePerGame * 0.68 +
+          disruptionPerGame * 3.6 +
+          tacklesPerGame * 0.95 +
+          snapShare * 10 -
+          availabilityPenalty,
         0,
         100
       );
-      const reliability = clamp(impactScore - volatility * 7 - availabilityPenalty * 0.6, 0, 100);
-      const onOffSwing = mean(rows.map((row) => row.onFieldNetEpa)) - mean(dataset.teamGameStats.map((row) => row.offensiveEpa));
+      const reliability = clamp(impactScore - volatility * 5.4 - availabilityPenalty * 0.6, 0, 100);
+      const onOffSwing = mean(rows.map((row) => row.onFieldNetEpa)) - teamNetAverage;
 
       return {
         player,
         position: player.position,
         impactScore: round(impactScore, 1),
         reliability: round(reliability, 1),
-        consistency: round(100 - volatility * 12, 1),
+        consistency: round(clamp(100 - volatility * 10, 0, 100), 1),
         usage,
         totalSnaps,
         epa: round(epa, 2),
@@ -421,14 +466,18 @@ export function getPlayerImpactRows(dataset: AnalyticsDataset) {
 }
 
 export function getPlayerTrend(dataset: AnalyticsDataset, playerId: string) {
+  const statsByGameId = indexBy(
+    dataset.playerGameStats.filter((stat) => stat.playerId === playerId),
+    (stat) => stat.gameId
+  );
+  const opponentsById = indexBy(dataset.opponents, (opponent) => opponent.id);
+
   return dataset.games.map((game) => {
-    const row = dataset.playerGameStats.find(
-      (stat) => stat.playerId === playerId && stat.gameId === game.id
-    );
+    const row = statsByGameId.get(game.id);
 
     return {
       week: `W${game.week}`,
-      opponent: getOpponentName(game.opponentId, dataset),
+      opponent: opponentsById.get(game.opponentId)?.name ?? "Unknown Opponent",
       epa: round(row?.epaContribution ?? 0, 2),
       grade: round(row?.assignmentGrade ?? 0, 1),
       snaps: row?.snaps ?? 0,
@@ -447,13 +496,9 @@ function segmentName(play: Play) {
 }
 
 export function getSituationalEfficiency(dataset: AnalyticsDataset) {
-  const grouped = mountOlivePlays(dataset).reduce<Record<string, Play[]>>((groups, play) => {
-    const key = segmentName(play);
-    groups[key] = [...(groups[key] ?? []), play];
-    return groups;
-  }, {});
+  const grouped = groupBy(mountOlivePlays(dataset), segmentName);
 
-  return Object.entries(grouped)
+  return Array.from(grouped.entries())
     .map(([segment, plays]) => ({
       segment,
       plays: plays.length,
@@ -466,11 +511,14 @@ export function getSituationalEfficiency(dataset: AnalyticsDataset) {
 }
 
 export function getOpponentScoutingRows(dataset: AnalyticsDataset) {
+  const gamesByOpponentId = groupBy(dataset.games, (game) => game.opponentId);
+  const statsByGameId = indexBy(dataset.teamGameStats, (stat) => stat.gameId);
+
   return dataset.opponents
     .map((opponent) => {
-      const gamesAgainst = dataset.games.filter((game) => game.opponentId === opponent.id);
+      const gamesAgainst = gamesByOpponentId.get(opponent.id) ?? [];
       const game = gamesAgainst[0];
-      const stat = game ? gameStat(dataset, game.id) : undefined;
+      const stat = game ? statsByGameId.get(game.id) : undefined;
       const pressureStress = opponent.defensivePressure * 0.45 + opponent.strengthRating * 55;
       const cluster =
         opponent.offensivePace >= 72
@@ -505,9 +553,16 @@ export function getOpponentScoutingRows(dataset: AnalyticsDataset) {
 }
 
 export function getGameAnalysisRows(dataset: AnalyticsDataset) {
+  const statsByGameId = indexBy(dataset.teamGameStats, (stat) => stat.gameId);
+  const drivesByGameId = groupBy(
+    dataset.drives.filter((drive) => drive.offense === "mount-olive"),
+    (drive) => drive.gameId
+  );
+  const opponentsById = indexBy(dataset.opponents, (opponent) => opponent.id);
+
   return dataset.games.map((game) => {
-    const stat = gameStat(dataset, game.id);
-    const drives = dataset.drives.filter((drive) => drive.gameId === game.id && drive.offense === "mount-olive");
+    const stat = statsByGameId.get(game.id);
+    const drives = drivesByGameId.get(game.id) ?? [];
     const scoringDrives = drives.filter(
       (drive) => drive.result === "touchdown" || drive.result === "field-goal"
     ).length;
@@ -517,7 +572,7 @@ export function getGameAnalysisRows(dataset: AnalyticsDataset) {
 
     return {
       game,
-      opponent: getOpponentName(game.opponentId, dataset),
+      opponent: opponentsById.get(game.opponentId)?.name ?? "Unknown Opponent",
       netEpa: round((stat?.offensiveEpa ?? 0) - (stat?.defensiveEpaAllowed ?? 0), 2),
       driveEfficiency: round(ratio(scoringDrives, drives.length), 3),
       explosivePlays: stat?.explosivePlays ?? 0,
@@ -534,6 +589,67 @@ export function getGameAnalysisRows(dataset: AnalyticsDataset) {
         game.result === "W"
           ? "Win explained by positive offensive EPA, field-position value, and manageable turnover exposure."
           : "Loss explained by defensive EPA allowed, negative turnover value, and reduced third-down flexibility.",
+    };
+  });
+}
+
+export function getGamePhaseTrendData(dataset: AnalyticsDataset, phaseSize = 6) {
+  const trendRows = getGameTrendData(dataset);
+  const phases = Array.from({ length: Math.ceil(trendRows.length / phaseSize) }, (_, index) =>
+    trendRows.slice(index * phaseSize, index * phaseSize + phaseSize)
+  ).filter((phase) => phase.length > 0);
+
+  return phases.map((phase, index) => {
+    const first = phase[0]!;
+    const last = phase.at(-1)!;
+
+    return {
+      phase: `${first.week}-${last.week}`,
+      label: `Games ${index * phaseSize + 1}-${index * phaseSize + phase.length}`,
+      netEfficiency: round(mean(phase.map((row) => row.netEfficiency)), 2),
+      successRate: round(mean(phase.map((row) => row.successRate)), 1),
+      explosiveRate: round(mean(phase.map((row) => row.explosiveRate)), 1),
+      gameControl: round(mean(phase.map((row) => row.gameControl)), 1),
+      winProbability: round(mean(phase.map((row) => row.winProbability)), 1),
+    };
+  });
+}
+
+export function getDriveResultDistribution(dataset: AnalyticsDataset) {
+  const mountOliveDrives = dataset.drives.filter((drive) => drive.offense === "mount-olive");
+  const drivesByResult = groupBy(mountOliveDrives, (drive) => drive.result);
+  const results = ["touchdown", "field-goal", "punt", "turnover", "downs", "end-half"] as const;
+
+  return results.map((result) => {
+    const matching = drivesByResult.get(result) ?? [];
+
+    return {
+      result,
+      label: result
+        .split("-")
+        .map((part) => part[0]!.toUpperCase() + part.slice(1))
+        .join(" "),
+      count: matching.length,
+      epa: round(mean(matching.map((drive) => drive.epa)), 2),
+      yards: round(mean(matching.map((drive) => drive.yards)), 1),
+    };
+  });
+}
+
+export function getRosterCompositionRows(dataset: AnalyticsDataset) {
+  const impactRows = getPlayerImpactRows(dataset);
+  const impactRowsByPosition = groupBy(impactRows, (row) => row.position);
+  const positions = [...new Set(dataset.players.map((player) => player.position))];
+
+  return positions.map((position) => {
+    const playersAtPosition = impactRowsByPosition.get(position) ?? [];
+
+    return {
+      position,
+      players: playersAtPosition.length,
+      impact: round(mean(playersAtPosition.map((row) => row.impactScore)), 1),
+      reliability: round(mean(playersAtPosition.map((row) => row.reliability)), 1),
+      usage: round(mean(playersAtPosition.map((row) => row.usage)), 1),
     };
   });
 }
@@ -555,7 +671,7 @@ export function getStrategyRecommendations(dataset: AnalyticsDataset) {
         "Conversion model weights success rate, field position value, and opponent strength. Current sample supports aggression in plus territory but not backed-up midfield attempts.",
     },
     {
-      title: "Run/pass tendency analyzer",
+      title: "Run/pass tendency review",
       signal:
         (success?.value ?? 0) > 0.44
           ? "Maintain balanced early-down sequencing with constraint screens."
@@ -575,7 +691,7 @@ export function getStrategyRecommendations(dataset: AnalyticsDataset) {
         "Compressed-field efficiency is above baseline but sample size is small.",
     },
     {
-      title: "Opponent Weakness Finder",
+      title: "Opponent planning review",
       signal:
         (explosive?.value ?? 0) > 0.085
           ? "Test quarters safeties with vertical switch concepts after run-action."
@@ -645,17 +761,21 @@ export function getReportCatalog(dataset: AnalyticsDataset) {
 }
 
 export function buildModelingRows(dataset: AnalyticsDataset): ModelFeatureRow[] {
+  const gamesById = indexBy(dataset.games, (game) => game.id);
+  const opponentsById = indexBy(dataset.opponents, (opponent) => opponent.id);
+  const playsByDriveId = groupBy(dataset.plays, (play) => play.driveId);
+
   return mountOliveDrives(dataset).map((drive) => {
-    const game = dataset.games.find((item) => item.id === drive.gameId)!;
-    const opponent = dataset.opponents.find((item) => item.id === game.opponentId)!;
-    const plays = dataset.plays.filter((play) => play.driveId === drive.id);
+    const game = gamesById.get(drive.gameId)!;
+    const opponent = opponentsById.get(game.opponentId)!;
+    const plays = playsByDriveId.get(drive.id) ?? [];
     const drivePoints = drive.result === "touchdown" ? 7 : drive.result === "field-goal" ? 3 : 0;
     const successfulDrive = drivePoints > 0 ? 1 : 0;
     const turnover = drive.result === "turnover" ? 1 : 0;
 
     return {
       id: drive.id,
-      label: `W${game.week} ${getOpponentName(game.opponentId, dataset)} Q${drive.quarter}`,
+      label: `W${game.week} ${opponent.name} Q${drive.quarter}`,
       source: "drive",
       features: {
         start_field_position: drive.startYardLine,

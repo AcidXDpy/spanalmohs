@@ -50,9 +50,9 @@ export default function StrategyPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Strategy Console"
+        eyebrow="Decision Analysis"
         title="Coach-Facing Decision Support for Leverage, Personnel, and Matchup Planning"
-        description="This console converts team metrics, opponent profiles, and player reliability into practical strategy recommendations."
+        description="This page converts team metrics, opponent profiles, and player reliability into practical strategy recommendations."
         badge={`${Math.round(simulation.winProbability * 100)}% Simulated Baseline`}
         icon={Workflow}
       />
@@ -86,7 +86,7 @@ export default function StrategyPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Opponent Weakness Finder</CardTitle>
+            <CardTitle>Opponent Planning Notes</CardTitle>
           </CardHeader>
           <CardContent>
             <SimpleDataTable
@@ -95,7 +95,7 @@ export default function StrategyPage() {
               columns={[
                 { key: "opponent", header: "Opponent", cell: (row) => row.opponent.name },
                 { key: "cluster", header: "Cluster", cell: (row) => <Badge variant="outline">{titleCase(row.cluster)}</Badge> },
-                { key: "weakness", header: "Attack Point", cell: (row) => row.recommendation },
+                { key: "planning", header: "Planning Note", cell: (row) => row.recommendation },
                 { key: "risk", header: "Risk", cell: (row) => row.opponent.riskProfile },
               ]}
             />

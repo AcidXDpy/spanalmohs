@@ -83,7 +83,7 @@ export default function MethodologyPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
             <p>
-              The ML Lab converts drive records into feature rows. Selected features are standardized when required, split into train and test sets, and passed through the selected algorithm.
+              Model Evaluation converts drive records into feature rows. Selected features are standardized when required, split into train and test sets, and passed through the selected algorithm.
             </p>
             <p>
               Linear regression reports coefficients, R Squared, RMSE, and MAE. Logistic regression reports probability, accuracy, and Log Loss. Trees and forests report readable rules and Feature Importance. K-means reports centroids and cluster descriptions.

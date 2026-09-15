@@ -18,7 +18,7 @@ export default function NotFound() {
           This analytics module is not registered in the current Mount Olive SPANAL build.
         </p>
         <Button asChild variant="outline">
-          <Link href="/dashboard">Return to Command Center</Link>
+          <Link href="/dashboard">Return to Dashboard</Link>
         </Button>
       </CardContent>
     </Card>

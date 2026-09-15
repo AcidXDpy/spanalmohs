@@ -564,7 +564,7 @@ function runRandomForest(rows: PreparedRow[], config: ModelRunConfig): ModelRepo
   const targetType = targetOptions.find((option) => option.value === config.target)?.type;
   const mode = targetType === "binary" ? "classification" : "regression";
   const split = splitRows(rows, config.trainRatio);
-  const trees = Array.from({ length: 21 }, (_, seed) => {
+  const trees = Array.from({ length: 11 }, (_, seed) => {
     const indexes = featureSubset(config.features, seed);
     const bootstrapped = deterministicBootstrap(split.train, seed);
     return {
@@ -631,7 +631,7 @@ function runRandomForest(rows: PreparedRow[], config: ModelRunConfig): ModelRepo
       })),
     ],
     rules: [
-      "Forest prediction is the average of 21 shallow trees.",
+      "Forest prediction is the average of 11 shallow trees.",
       "Feature importance is based on split frequency weighted by node sample count.",
     ],
     clusters: [],

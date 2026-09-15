@@ -2,6 +2,9 @@ import { Radar } from "lucide-react";
 
 import { InsightPanel } from "@/components/analytics/insight-panel";
 import { PageHeader } from "@/components/analytics/page-header";
+import { CinematicAnalysis } from "@/components/analytics/cinematic-analysis";
+import { buildSeasonAnalysisDashboardData } from "@/lib/stats/football-dashboard";
+import { AnalyticsBarChart } from "@/components/charts/analytics-bar-chart";
 import { AnalyticsScatterChart } from "@/components/charts/analytics-scatter-chart";
 import { SimpleDataTable } from "@/components/tables/simple-data-table";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +23,21 @@ export default function OpponentsPage() {
     pace: row.opponent.offensivePace,
     strength: row.opponent.strengthRating * 100,
   }));
+  const pressureRows = rows
+    .slice()
+    .sort((a, b) => b.pressureStress - a.pressureStress)
+    .slice(0, 14)
+    .map((row) => ({
+      opponent: row.opponent.name,
+      pressureStress: row.pressureStress,
+      matchupScore: row.matchupScore,
+    }));
 
   return (
     <div className="space-y-6">
+      <CinematicAnalysis data={buildSeasonAnalysisDashboardData(dataset)} only="opponent" />
       <PageHeader
-        eyebrow="Opponent Scouting"
+        eyebrow="Opponent Analysis"
         title="Tendencies, Style Clusters, Matchup Analysis, and Scouting Reports"
         description="Opponent profiles combine pace, defensive pressure, strength rating, known tendencies, and Mount Olive's game-level performance against similar styles."
         badge={`${rows.length} Opponent Profiles`}
@@ -60,8 +73,17 @@ export default function OpponentsPage() {
         </Card>
       </section>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Highest Pressure-Stress Profiles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AnalyticsBarChart data={pressureRows} xKey="opponent" yKey="pressureStress" height={300} />
+        </CardContent>
+      </Card>
+
       <InsightPanel
-        title="Model-Generated Scouting Report"
+        title="Scouting Summary"
         insights={[
           {
             label: "Highest-Risk Opponent",
@@ -111,7 +133,7 @@ export default function OpponentsPage() {
                   : "Manageable profile if Mount Olive wins early downs."}
               </p>
               <p>
-                <span className="text-foreground">Weakness:</span>{" "}
+                <span className="text-foreground">Preparation Note:</span>{" "}
                 {row.opponent.defensivePressure > 65
                   ? "Aggression can be punished by screens, motion, and protection checks."
                   : "Pressure profile is less disruptive than the stronger opponents in sample."}

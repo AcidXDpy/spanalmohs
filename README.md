@@ -1,6 +1,6 @@
 # Mount Olive SPANAL
 
-Mount Olive SPANAL is a production-oriented high-school sports analytics command center. The initial build supports football and is structured so additional sports or school activities can plug into the same data, stats, ML, and reporting layers.
+Mount Olive SPANAL is a production-oriented high-school sports analytics application. The initial build supports football and is structured so additional sports or school activities can plug into the same data, statistics, modeling, and reporting layers.
 
 ## Stack
 
@@ -13,14 +13,14 @@ Mount Olive SPANAL is a production-oriented high-school sports analytics command
 
 ## Sections
 
-- Command Center Dashboard
-- Data Hub
-- Advanced Statistics Engine
-- Machine Learning Lab
-- Player Intelligence
-- Opponent Scouting
+- Dashboard
+- Data
+- Team Performance
+- Model Evaluation
+- Player Performance
+- Opponent Analysis
 - Game Analysis
-- Strategy Console
+- Decision Analysis
 - Reports
 - Methodology / Credibility
 

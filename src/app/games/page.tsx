@@ -7,7 +7,7 @@ import { SimpleDataTable } from "@/components/tables/simple-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAnalyticsDataset } from "@/lib/data/repository";
-import { getGameAnalysisRows, getGameTrendData, getPlayerImpactRows } from "@/lib/stats/football";
+import { getDriveResultDistribution, getGameAnalysisRows, getGameTrendData, getPlayerImpactRows } from "@/lib/stats/football";
 
 export default function GamesPage() {
   const dataset = getAnalyticsDataset();
@@ -16,10 +16,12 @@ export default function GamesPage() {
   const driveRows = dataset.drives
     .filter((drive) => drive.offense === "mount-olive")
     .map((drive) => ({
-      drive: `${drive.gameId.replace("game-0", "G")}-${drive.quarter}`,
+      drive: `${drive.gameId.replace("game-", "G")}-${drive.quarter}`,
       epa: drive.epa,
       yards: drive.yards,
-    }));
+    }))
+    .slice(-90);
+  const driveResultRows = getDriveResultDistribution(dataset);
   const playerImpact = getPlayerImpactRows(dataset).slice(0, 5);
 
   return (
@@ -50,13 +52,22 @@ export default function GamesPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Drive EPA Chart</CardTitle>
+            <CardTitle>Recent Drive EPA Chart</CardTitle>
           </CardHeader>
           <CardContent>
             <AnalyticsBarChart data={driveRows} xKey="drive" yKey="epa" height={300} />
           </CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Drive Result Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AnalyticsBarChart data={driveResultRows} xKey="label" yKey="count" height={280} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

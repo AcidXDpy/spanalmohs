@@ -72,7 +72,7 @@ export default function ReportsPage() {
             </div>
             <div className="rounded-lg border bg-background p-3">
               <div className="mb-1 text-foreground">Model Output</div>
-              ML reports include Train/Test split, validation metrics, Feature Importance, and small-sample warnings.
+              Model reports include Train/Test split, validation metrics, Feature Importance, and small-sample warnings.
             </div>
             <div className="rounded-lg border bg-background p-3">
               <div className="mb-1 text-foreground">Credibility Note</div>

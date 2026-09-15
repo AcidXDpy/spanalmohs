@@ -12,9 +12,9 @@ export default function MlLabPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Machine Learning Lab"
+        eyebrow="Model Evaluation"
         title="Train, Validate, Interpret, and Export Exploratory Football Models"
-        description="A modular modeling pipeline for regression, probability estimation, decision rules, ensemble feature importance, and unsupervised drive clustering."
+        description="A modular modeling workflow for regression, probability estimation, decision rules, ensemble feature importance, and unsupervised drive clustering."
         badge={`${rows.length} Modeling Rows`}
         icon={BrainCircuit}
       />

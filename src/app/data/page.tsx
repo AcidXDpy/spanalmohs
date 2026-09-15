@@ -19,7 +19,7 @@ export default function DataHubPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Data Hub"
+        eyebrow="Data"
         title="Upload, Validate, Edit, and Inspect the Analytics Source of Truth"
         description="A central intake layer for players, teams, games, opponents, plays, drives, stats, scouting notes, practices, injuries, and availability records."
         badge={`${Math.round(quality.overallCompleteness * 100)}% Complete`}

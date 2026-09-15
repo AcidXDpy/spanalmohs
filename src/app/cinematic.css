@@ -1,0 +1,624 @@
+.cinematic-analysis {
+  width: calc(100% + 64px);
+  margin-left: -32px;
+  color: #f1f0eb;
+}
+.cinema-motion-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 36px 18px;
+  font-size: 11px;
+  color: #b5b8b6;
+}
+.cinema-motion-control button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px;
+}
+.cinema-motion-control button:hover {
+  color: white;
+}
+.cinema-scene {
+  position: relative;
+  height: 310vh;
+  scroll-margin-top: 56px;
+}
+.cinema-pin {
+  position: sticky;
+  top: 56px;
+  height: calc(100svh - 56px);
+  min-height: 620px;
+  overflow: hidden;
+  background: #101414;
+  padding: 26px 48px 60px;
+  isolation: isolate;
+}
+.cinema-scene:nth-of-type(even) .cinema-pin {
+  background: #121817;
+}
+.cinema-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform-origin: center;
+}
+.cinema-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #090d0dec, #090d0d30 75%),
+    linear-gradient(0deg, #090d0dce, transparent 60%);
+}
+.cinema-topline {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #ffffff24;
+  color: #aebbb6;
+  font: 11px var(--font-mono);
+  text-transform: uppercase;
+}
+.cinema-topline > span:last-child {
+  text-align: right;
+}
+.cinema-season-content {
+  height: calc(100% - 38px);
+  position: relative;
+}
+.cinema-season-heading {
+  position: relative;
+  z-index: 2;
+  padding-top: 42px;
+  pointer-events: none;
+}
+.cinema-season-heading > p,
+.cinema-split-heading p,
+.cinema-player-copy > p:first-child {
+  font: 12px var(--font-mono);
+  color: #abbab3;
+  margin-bottom: 20px;
+}
+.cinema-season-heading h1 {
+  font-size: 76px;
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+.cinema-headline-metrics {
+  display: flex;
+  gap: 44px;
+  margin-top: 32px;
+  align-items: baseline;
+}
+.cinema-headline-metrics strong {
+  display: block;
+  font-size: 34px;
+  font-weight: 450;
+  font-variant-numeric: tabular-nums;
+}
+.cinema-headline-metrics > div:first-child strong {
+  color: #a7d5bf;
+  font-size: 54px;
+}
+.cinema-headline-metrics span {
+  display: block;
+  font-size: 11px;
+  margin-top: 6px;
+  color: #bac0bb;
+}
+.cinema-season-graph {
+  position: absolute;
+  width: 63%;
+  right: 0;
+  bottom: 4%;
+}
+.cinema-season-graph .trend-visual {
+  background: none;
+}
+.cinema-season-graph .visual-caption,
+.cinema-season-graph .visual-note {
+  display: none;
+}
+.cinema-context {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #a8b5ad;
+  font-size: 11px;
+  max-width: 34%;
+}
+.cinema-stages {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+.cinema-stages > * {
+  min-width: 0;
+  text-align: left;
+  border-top: 1px solid #ffffff25;
+  padding: 10px 0 0;
+  font-size: 11px;
+  color: #808e89;
+  transition: color 180ms;
+}
+.cinema-stages > * > span {
+  margin-right: 12px;
+  font-family: var(--font-mono);
+}
+.cinema-stages > [data-active="true"],
+.cinema-stages > [aria-pressed="true"] {
+  color: #d6e5db;
+  border-color: #a4ceb8;
+}
+.cinema-stages > button {
+  cursor: pointer;
+}
+.cinema-scroll-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform-origin: left;
+  background: #a4ceb8;
+}
+.cinema-split-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+  padding: 24px 0 12px;
+}
+.cinema-split-heading h2 {
+  font-size: 38px;
+  font-weight: 450;
+  line-height: 1.18;
+}
+.cinema-aside-metric {
+  text-align: right;
+  flex-shrink: 0;
+}
+.cinema-aside-metric strong {
+  display: block;
+  font-size: 42px;
+  font-weight: 400;
+  color: #c9d8cb;
+  font-variant-numeric: tabular-nums;
+}
+.cinema-aside-metric span {
+  font-size: 11px;
+  color: #a9b5ae;
+}
+.cinema-field-stage {
+  margin: 0 auto;
+  max-width: 1050px;
+  width: min(100%, calc((100svh - 350px) * 1.89));
+}
+.cinema-field-stage .visual-caption {
+  margin-bottom: 0;
+}
+.cinema-field-stage .field-detail {
+  display: none;
+}
+.cinema-interpretation {
+  color: #aab7b0;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 18px;
+  max-width: 760px;
+}
+.cinema-player-content {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 36px;
+  height: calc(100% - 42px);
+  align-items: center;
+}
+.cinema-player-copy h2 {
+  font-size: 50px;
+  line-height: 1.08;
+  font-weight: 450;
+  max-width: 490px;
+}
+.cinema-large-number {
+  font-size: 88px;
+  color: #e0c38b;
+  line-height: 1.15;
+  margin-top: 38px;
+  font-variant-numeric: tabular-nums;
+}
+.cinema-player-copy > span {
+  font-size: 12px;
+  color: #b6bdb6;
+}
+.cinema-player-copy .cinema-interpretation {
+  margin-top: 28px;
+  max-width: 360px;
+}
+.cinema-player-visual {
+  min-width: 0;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.player-profile-mark {
+  position: absolute;
+  inset: 10% 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid #d7ceb12a;
+  border-bottom: 1px solid #d7ceb12a;
+  background-image:
+    linear-gradient(#ffffff05 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff05 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.player-profile-mark > span {
+  font-size: 180px;
+  line-height: 1;
+  color: #d6c8aa;
+  font-weight: 300;
+}
+.player-profile-mark small {
+  color: #d6c8aa;
+  font: 11px var(--font-mono);
+  margin-top: 24px;
+}
+.cinema-scatter {
+  width: 100%;
+  position: relative;
+}
+.cinema-scatter circle:focus,
+.cinema-scatter circle:hover {
+  stroke: #fff;
+  stroke-width: 2;
+  outline: none;
+}
+.cinema-muted {
+  color: #9bacb4;
+}
+.cinema-opponent-content {
+  padding-top: 10px;
+}
+.cinema-matrix {
+  margin-top: 22px;
+}
+.matchup-row {
+  display: grid;
+  grid-template-columns: 1.7fr repeat(3, 1fr) 0.65fr;
+  gap: 8px;
+  align-items: stretch;
+  border-bottom: 1px solid #ffffff14;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.matchup-row > span {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.matchup-row > span:first-child {
+  align-items: start;
+  justify-content: center;
+  flex-direction: column;
+  padding-left: 0;
+}
+.matchup-row small {
+  font-size: 10px;
+  color: #9ba9a5;
+  margin-top: 3px;
+}
+.matchup-head {
+  color: #99aaa7;
+  font: 10px var(--font-mono);
+}
+.cinema-games {
+  height: 260vh;
+}
+.cinema-games-pin {
+  position: sticky;
+  top: 56px;
+  height: calc(100svh - 56px);
+  min-height: 620px;
+  overflow: hidden;
+  background: #15181b;
+  padding: 26px 48px;
+}
+.cinema-games-pin h2 {
+  font-size: 34px;
+  font-weight: 450;
+  margin: 28px 0;
+}
+.cinema-games-window {
+  overflow: hidden;
+}
+.cinema-games-track {
+  display: flex;
+  width: max-content;
+  gap: 44px;
+}
+.cinema-game-panel {
+  width: 360px;
+  border-left: 1px solid #ffffff30;
+  padding: 0 0 0 28px;
+}
+.cinema-game-panel > p:first-of-type {
+  font: 11px var(--font-mono);
+  color: #a3b1b5;
+}
+.cinema-game-panel h3 {
+  font-size: 26px;
+  margin-top: 14px;
+  font-weight: 450;
+}
+.game-score {
+  font-size: 60px;
+  line-height: 1.2;
+  margin: 16px 0;
+}
+.cinema-game-panel svg {
+  height: 110px;
+  width: 100%;
+}
+.game-numbers {
+  display: flex;
+  gap: 36px;
+  margin-top: 12px;
+}
+.game-numbers strong {
+  display: block;
+  font-size: 26px;
+  color: #aacbbf;
+  font-weight: 400;
+}
+.game-numbers span {
+  font-size: 11px;
+  color: #b6c1ba;
+}
+.game-key-play {
+  font-size: 11px;
+  color: #a6b3ad;
+  margin-top: 22px;
+  line-height: 1.6;
+}
+.cinema-game-photo {
+  height: 120px;
+  position: relative;
+  margin-bottom: 18px;
+}
+.cinema-empty {
+  display: grid;
+  min-height: 400px;
+  place-items: center;
+  color: #b9c2bc;
+}
+.cinema-scene[data-static="true"],
+.cinema-games[data-static="true"] {
+  height: auto;
+}
+.cinema-scene[data-static="true"] .cinema-pin {
+  position: relative;
+}
+.cinema-games[data-static="true"] .cinema-games-pin {
+  position: relative;
+  height: auto;
+  min-height: 620px;
+}
+.cinema-games[data-static="true"] .cinema-games-window {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 18px;
+}
+.cinema-games[data-static="true"] article {
+  scroll-snap-align: start;
+}
+.cinematic-analysis button:focus-visible,
+.cinema-games-window:focus-visible {
+  outline: 2px solid #d7be81;
+  outline-offset: 4px;
+}
+@media (min-width: 1600px) {
+  .cinema-pin,
+  .cinema-games-pin {
+    padding-left: 70px;
+    padding-right: 70px;
+  }
+  .cinema-season-heading h1 {
+    font-size: 96px;
+  }
+}
+@media (max-width: 1023px) {
+  .cinematic-analysis {
+    width: calc(100% + 48px);
+    margin-left: -24px;
+  }
+  .cinema-pin,
+  .cinema-games-pin {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+  .cinema-season-heading h1 {
+    font-size: 64px;
+  }
+  .cinema-stages {
+    left: 28px;
+    right: 28px;
+  }
+  .cinema-headline-metrics {
+    gap: 24px;
+  }
+  .cinema-player-copy h2 {
+    font-size: 40px;
+  }
+  .cinema-large-number {
+    font-size: 64px;
+  }
+}
+@media (max-height: 760px) and (min-width: 761px) {
+  .cinema-pin,
+  .cinema-games-pin {
+    min-height: 580px;
+  }
+  .cinema-season-heading {
+    padding-top: 25px;
+  }
+  .cinema-season-heading h1 {
+    font-size: 60px;
+  }
+  .cinema-split-heading h2 {
+    font-size: 30px;
+  }
+  .cinema-matrix {
+    margin-top: 10px;
+  }
+  .matchup-row > span {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .cinema-split-heading p {
+    margin-bottom: 8px;
+  }
+}
+@media (max-width: 760px) {
+  .cinema-motion-control {
+    padding: 0 20px 14px;
+  }
+  .cinema-motion-control button {
+    display: none;
+  }
+  .cinema-pin {
+    height: auto;
+    min-height: 80svh;
+    padding: 22px 20px 100px;
+  }
+  .cinema-topline {
+    font-size: 9px;
+    align-items: start;
+  }
+  .cinema-season-heading h1 {
+    font-size: 52px;
+  }
+  .cinema-season-heading > p {
+    font-size: 10px;
+    margin-bottom: 16px;
+  }
+  .cinema-season-content {
+    height: auto;
+  }
+  .cinema-headline-metrics {
+    flex-wrap: wrap;
+    gap: 22px;
+    margin-top: 24px;
+  }
+  .cinema-headline-metrics > div:first-child strong {
+    font-size: 40px;
+  }
+  .cinema-headline-metrics strong {
+    font-size: 28px;
+  }
+  .cinema-season-graph {
+    position: relative;
+    width: 100%;
+    bottom: auto;
+    margin-top: 30px;
+  }
+  .cinema-context {
+    position: relative;
+    max-width: 100%;
+    margin-top: 10px;
+    font-size: 10px;
+  }
+  .cinema-stages {
+    left: 20px;
+    right: 20px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+  }
+  .cinema-stages > * {
+    font-size: 10px;
+  }
+  .cinema-split-heading {
+    display: block;
+    padding-top: 28px;
+  }
+  .cinema-split-heading h2 {
+    font-size: 32px;
+  }
+  .cinema-aside-metric {
+    text-align: left;
+    margin: 20px 0;
+  }
+  .cinema-aside-metric strong {
+    font-size: 38px;
+  }
+  .cinema-field-stage {
+    width: 100%;
+  }
+  .cinema-player-content {
+    display: block;
+  }
+  .cinema-player-copy {
+    padding-top: 32px;
+  }
+  .cinema-player-copy h2 {
+    font-size: 42px;
+  }
+  .cinema-player-copy > p:first-child {
+    font-size: 10px;
+  }
+  .cinema-large-number {
+    font-size: 66px;
+    margin-top: 24px;
+  }
+  .cinema-player-visual {
+    min-height: 310px;
+  }
+  .player-profile-mark > span {
+    font-size: 120px;
+  }
+  .cinema-scatter .visual-caption {
+    margin-top: 26px;
+  }
+  .cinema-matrix {
+    overflow-x: auto;
+  }
+  .matchup-row {
+    min-width: 540px;
+  }
+  .cinema-games-pin {
+    padding: 22px 20px;
+  }
+  .cinema-games-pin h2 {
+    font-size: 30px;
+  }
+  .cinema-game-panel {
+    width: 280px;
+    padding-left: 18px;
+  }
+  .cinema-games-track {
+    gap: 24px;
+  }
+}
+
+@media (max-width: 639px) {
+  .cinematic-analysis { width: calc(100% + 32px); margin-left: -16px; }
+}

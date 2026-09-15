@@ -137,3 +137,87 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 }
+
+.performance-narrative { --analysis-green: #82d8b4; letter-spacing: 0; }
+.analysis-opening { padding: 36px 0 24px; border-bottom: 1px solid var(--border); }
+.opening-meta, .opening-footer, .visual-caption { display: flex; align-items: center; justify-content: space-between; gap: 16px; font: 11px var(--font-mono); color: var(--muted-foreground); }
+.analysis-opening h1 { margin: 42px 0 38px; font-size: 42px; line-height: 1.15; font-weight: 550; }
+.analysis-opening h1 > span { display: block; color: var(--muted-foreground); font-weight: 400; font-size: 24px; margin-top: 10px; }
+.opening-metrics { display: grid; grid-template-columns: 1.65fr 1fr 1fr 1fr; align-items: end; gap: 28px; padding-bottom: 42px; }
+.opening-metrics > div { min-width: 0; }
+.opening-metrics strong { display: block; font-size: 38px; font-weight: 450; font-variant-numeric: tabular-nums; }
+.opening-metrics > div > span { display: block; color: var(--muted-foreground); font-size: 12px; margin-top: 8px; }
+.primary-figure > div { font-size: 82px; line-height: 1; color: var(--analysis-green); font-weight: 450; font-variant-numeric: tabular-nums; }
+.opening-footer { border-top: 1px solid var(--border); padding-top: 20px; }
+.opening-footer a { display: inline-flex; align-items: center; gap: 8px; color: var(--foreground); }
+.analysis-chapter { padding-top: 48px; border-bottom: 1px solid var(--border); }
+.chapter-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--border); }
+.chapter-heading > span { font: 11px var(--font-mono); color: var(--analysis-green, #82d8b4); }
+.chapter-heading h2 { font-size: 22px; font-weight: 500; }
+.chapter-layout { display: grid; grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.5fr); gap: 52px; align-items: start; }
+.chapter-step { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; opacity: 0.35; transition: opacity 350ms ease; padding: 35px 0; }
+.chapter-step[data-active="true"] { opacity: 1; }
+.chapter-index { font: 11px var(--font-mono); color: var(--muted-foreground); }
+.chapter-step h3 { font-size: 19px; margin-top: 18px; }
+.chapter-value { font-size: 58px; font-variant-numeric: tabular-nums; line-height: 1.2; margin: 15px 0; }
+.chapter-step p { max-width: 320px; font-size: 14px; line-height: 1.8; color: var(--muted-foreground); }
+.chapter-visual { position: sticky; top: 100px; min-width: 0; padding: 28px 0; }
+.chapter-controls { display: flex; flex-wrap: wrap; gap: 3px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 24px; }
+.chapter-controls button { position: relative; cursor: pointer; padding: 9px 12px; font-size: 11px; color: var(--muted-foreground); }
+.chapter-controls button > span:last-child { position: relative; }
+.chapter-controls button[aria-pressed="true"] { color: var(--foreground); }
+.active-indicator { position: absolute; inset: 0; background: #ffffff10; border-bottom: 2px solid #82d8b4; }
+.chapter-controls button:focus-visible, .field-visual circle:focus-visible { outline: 2px solid #e9be73; outline-offset: 3px; }
+.visual-caption { margin-bottom: 18px; }
+.trend-visual svg, .field-visual svg { width: 100%; height: auto; overflow: visible; }
+.trend-visual { padding-top: 22px; background-image: linear-gradient(#ffffff03 1px, transparent 1px), linear-gradient(90deg, #ffffff03 1px, transparent 1px); background-size: 32px 32px; }
+.visual-note, .field-detail { font-size: 11px; line-height: 1.7; color: var(--muted-foreground); margin-top: 16px; min-height: 38px; }
+.chapter-progress { height: 2px; margin-top: 24px; background: #ffffff12; }
+.chapter-progress > div { height: 100%; background: #82d8b4; transform-origin: left; }
+.situation-visual { min-height: 400px; padding-top: 22px; }
+.situation-row { margin-top: 22px; }
+.situation-row > div:first-child { display: flex; justify-content: space-between; font-size: 13px; }
+.situation-row strong { font-family: var(--font-mono); font-weight: 400; }
+.situation-track { height: 22px; background: #ffffff08; margin: 9px 0 4px; }
+.situation-track > div { height: 100%; width: 100%; transform-origin: left; }
+.situation-row small { font: 10px var(--font-mono); color: var(--muted-foreground); }
+.field-visual circle { cursor: crosshair; transition: filter 150ms; }
+.field-visual circle:hover { filter: brightness(1.3); stroke: white; stroke-width: 2px; }
+.field-game-select { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+.field-game-select select { min-width: 0; max-width: 100%; padding: 8px; background: var(--background); border: 1px solid var(--border); }
+#season-performance { scroll-margin-top: 80px; }
+tbody tr { transition: background-color 150ms; }
+tbody tr:hover { background: #ffffff06; }
+@media (min-width: 1400px) { .analysis-opening h1 { font-size: 52px; } .primary-figure > div { font-size: 104px; } .analysis-opening { padding-top: 44px; } }
+@media (max-width: 1100px) { .opening-metrics { gap: 18px; } .opening-metrics strong { font-size: 28px; } .primary-figure > div { font-size: 66px; } .chapter-layout { gap: 25px; } }
+@media (max-width: 899px) {
+  .chapter-layout { display: flex; flex-direction: column; gap: 0; }
+  .chapter-narrative { width: 100%; }
+  .chapter-step { display: none; min-height: 0; opacity: 1; padding: 28px 0 12px; }
+  .chapter-step[data-active="true"] { display: flex; }
+  .chapter-step p { max-width: 560px; }
+  .chapter-visual { position: static; width: 100%; }
+  .chapter-value { font-size: 48px; }
+  .analysis-opening h1 { font-size: 36px; }
+  .opening-metrics { grid-template-columns: 1fr 1fr; row-gap: 28px; }
+  .chapter-progress { display: none; }
+}
+@media (max-width: 480px) {
+  .analysis-opening { padding-top: 15px; }
+  .opening-meta { font-size: 9px; gap: 10px; }
+  .analysis-opening h1 { font-size: 30px; margin: 30px 0; }
+  .analysis-opening h1 > span { font-size: 20px; }
+  .primary-figure > div { font-size: 52px; }
+  .opening-metrics strong { font-size: 30px; }
+  .chapter-heading h2 { font-size: 18px; }
+  .chapter-heading > span { font-size: 9px; }
+  .opening-footer { flex-wrap: wrap; font-size: 10px; }
+  .chapter-controls button { padding: 8px; }
+  .visual-caption { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .chapter-step { min-height: 0; padding: 24px 0; }
+  .chapter-step:not([data-active="true"]) { display: none; }
+  .chapter-visual { position: static; }
+}
